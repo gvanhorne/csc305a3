@@ -55,3 +55,19 @@ if __name__ == "__main__":
     fp = sys.argv[1]
     scene_dict = read_image_file(fp)
     print(scene_dict)
+
+    # Function Main
+      # for each pixel (c,r) on screen
+      #  determine ray rc,r from eye through pixel
+      #  ray.setDepth(1)
+      #  color(c,r) = raytrace(rc,r )
+      # end for
+    # end
+    # function raytrace(r)
+      # if (ray.depth() > MAX_DEPTH) return black
+      # P = closest intersection of ray with all objects
+      # if( no intersection ) return backgroundColor
+      # clocal = Sum(shadowRays(P,Lighti))
+      # cre = raytrace(rre)
+      # return (clocal+kre*cre)
+    # end
