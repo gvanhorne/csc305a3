@@ -1,4 +1,5 @@
 import sys
+
 def read_image_file(fp):
   """
   Reads an input file for an image and creates a dictionary for the pertinent values.
@@ -54,7 +55,12 @@ if __name__ == "__main__":
         sys.exit(1)
     fp = sys.argv[1]
     scene_dict = read_image_file(fp)
-    print(scene_dict)
+
+    width, height = int(scene_dict['RES'][0]), int(scene_dict['RES'][1])
+
+    for c in range(width):
+      for r in range(height):
+        print(f"Pixel Coordinate: ({c}, {r})")
 
     # Function Main
       # for each pixel (c,r) on screen
