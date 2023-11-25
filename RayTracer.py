@@ -1,7 +1,7 @@
 import sys
 from typing import List, Tuple
 
-def write_ppm(filename: str, width: int, height: int, bg_colour: Tuple[float, float, float]):
+def write_ppm(filename: str, width: int, height: int, bg_colour: Tuple[float, float, float], near: float):
   """
   Write out a PPM image file.
 
@@ -10,6 +10,7 @@ def write_ppm(filename: str, width: int, height: int, bg_colour: Tuple[float, fl
   - width (int): The width of the image in pixels.
   - height (int): The height of the image in pixels.
   - bg_colour (Tuple[float, float, float]): The color of the background represented as RGB values in the range [0, 1].
+  - near (float): Absolute distance from the eye to the image plane along the negative z axis.
 
   Returns:
   None
@@ -17,15 +18,23 @@ def write_ppm(filename: str, width: int, height: int, bg_colour: Tuple[float, fl
   Example usage:
   >>> write_ppm('output.ppm', 3, 2, (1.0, 0.0, 0.0))
   """
+  width, height = 2*ncols, 2*nrows
+
   with open(filename, 'w') as ppm_file:
-    ppm_file.write(f"P3\n{width} {height}\n255\n")
+    ppm_file.write(f"P3\n{ncols} {nrows}\n255\n")
 
     # Convert background color values to the 0-255 range
     scaled_bg_colour = tuple(int(value * 255) for value in bg_colour)
 
-    for c in range(width):
-      for r in range(height):
-        ppm_file.write(f"{scaled_bg_colour[0]}, {scaled_bg_colour[1]}, {scaled_bg_colour[2]} ")
+    for c in range(ncols):
+      for r in range(nrows):
+        uc = -1*width + width*((2*c) / ncols)
+        vr = -1*height + height*((2*r) / nrows)
+        camera_coordinates = (uc, vr, -1*near)
+        if uc == 0 or vr == 0:
+          ppm_file.write(f"{0}, {0}, {0} ")
+        else:
+          ppm_file.write(f"{scaled_bg_colour[0]}, {scaled_bg_colour[1]}, {scaled_bg_colour[2]} ")
       ppm_file.write("\n")
 
 def read_image_file(fp: str):
@@ -85,17 +94,10 @@ if __name__ == "__main__":
     scene_dict = read_image_file(fp)
 
     ncols, nrows = int(scene_dict['RES'][0]), int(scene_dict['RES'][1])
-    width, height = 2*ncols, 2*nrows
-    N = float(scene_dict['NEAR'])
+    near = float(scene_dict['NEAR'])
     filename = scene_dict['OUTPUT']
     bg_colour = (scene_dict['BACK'][0], scene_dict['BACK'][1], scene_dict['BACK'][2])
-
-    for c in range(ncols):
-      for r in range(nrows):
-        uc = -1*width + width*((2*c) / ncols)
-        vr = -1*height + height*((2*r) / nrows)
-        camera_coordinates = (uc, vr, -1*N)
-    # write_ppm(filename, width, height, bg_colour)
+    write_ppm(filename, ncols, nrows, bg_colour, near)
     # for c in range(width):
     #   for r in range(height):
     #     print(f"Pixel Coordinate: ({c}, {r})")
