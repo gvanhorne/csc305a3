@@ -84,11 +84,18 @@ if __name__ == "__main__":
     fp = sys.argv[1]
     scene_dict = read_image_file(fp)
 
-    width, height = int(scene_dict['RES'][0]), int(scene_dict['RES'][1])
+    ncols, nrows = int(scene_dict['RES'][0]), int(scene_dict['RES'][1])
+    width, height = 2*ncols, 2*nrows
+    N = float(scene_dict['NEAR'])
     filename = scene_dict['OUTPUT']
     bg_colour = (scene_dict['BACK'][0], scene_dict['BACK'][1], scene_dict['BACK'][2])
 
-    write_ppm(filename, width, height, bg_colour)
+    for c in range(ncols):
+      for r in range(nrows):
+        uc = -1*width + width*((2*c) / ncols)
+        vr = -1*height + height*((2*r) / nrows)
+        camera_coordinates = (uc, vr, -1*N)
+    # write_ppm(filename, width, height, bg_colour)
     # for c in range(width):
     #   for r in range(height):
     #     print(f"Pixel Coordinate: ({c}, {r})")
