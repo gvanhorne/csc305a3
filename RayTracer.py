@@ -64,7 +64,7 @@ def read_image_file(fp: str):
       dict: A dictionary containing the entries from the input file.
   """
   try:
-    scene_dict = {}
+    scene_dict = {'SPHERES': [], 'LIGHTS': []}
   
     with open(fp, 'r') as f:
       for line in f:
@@ -79,7 +79,13 @@ def read_image_file(fp: str):
           value = line[1]
         else:
           value = line[1:]
-        scene_dict[key] = value
+
+        if key == 'SPHERE':
+          scene_dict['SPHERES'].append(value)
+        elif key == 'LIGHT':
+          scene_dict['LIGHTS'].append(value)
+        else:
+          scene_dict[key] = value
         
   except FileNotFoundError:
       print(f"Error: File '{fp}' not found.")
