@@ -1,29 +1,34 @@
 import sys
+from typing import List, Tuple
 
-def write_ppm(filename, width, height):
+def write_ppm(filename: str, width: int, height: int, bg_colour: Tuple[float, float, float]):
   """
-  Write a PPM image file with a simple gradient pattern.
+  Write out a PPM image file.
 
   Parameters:
   - filename (str): The name of the PPM file to be created.
   - width (int): The width of the image in pixels.
   - height (int): The height of the image in pixels.
+  - bg_colour (Tuple[float, float, float]): The color of the background represented as RGB values in the range [0, 1].
 
   Returns:
   None
 
   Example usage:
-  >>> write_ppm('output.ppm', 3, 2)
+  >>> write_ppm('output.ppm', 3, 2, (1.0, 0.0, 0.0))
   """
   with open(filename, 'w') as ppm_file:
     ppm_file.write(f"P3\n{width} {height}\n255\n")
 
+    # Convert background color values to the 0-255 range
+    scaled_bg_colour = tuple(int(value * 255) for value in bg_colour)
+
     for c in range(width):
       for r in range(height):
-        ppm_file.write(f"{c}, {r}, {1} ")
+        ppm_file.write(f"{scaled_bg_colour[0]}, {scaled_bg_colour[1]}, {scaled_bg_colour[2]} ")
       ppm_file.write("\n")
 
-def read_image_file(fp):
+def read_image_file(fp: str):
   """
   Reads an input file for an image and creates a dictionary for the pertinent values.
 
@@ -81,8 +86,9 @@ if __name__ == "__main__":
 
     width, height = int(scene_dict['RES'][0]), int(scene_dict['RES'][1])
     filename = scene_dict['OUTPUT']
+    bg_colour = (scene_dict['BACK'][0], scene_dict['BACK'][1], scene_dict['BACK'][2])
 
-    write_ppm(filename, width, height)
+    write_ppm(filename, width, height, bg_colour)
     # for c in range(width):
     #   for r in range(height):
     #     print(f"Pixel Coordinate: ({c}, {r})")
