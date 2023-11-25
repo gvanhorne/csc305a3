@@ -1,6 +1,20 @@
 import sys
 
 def write_ppm(filename, width, height):
+  """
+  Write a PPM image file with a simple gradient pattern.
+
+  Parameters:
+  - filename (str): The name of the PPM file to be created.
+  - width (int): The width of the image in pixels.
+  - height (int): The height of the image in pixels.
+
+  Returns:
+  None
+
+  Example usage:
+  >>> write_ppm('output.ppm', 3, 2)
+  """
   with open(filename, 'w') as ppm_file:
     ppm_file.write(f"P3\n{width} {height}\n255\n")
 
