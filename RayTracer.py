@@ -1,5 +1,14 @@
 import sys
 
+def write_ppm(filename, width, height):
+  with open(filename, 'w') as ppm_file:
+    ppm_file.write(f"P3\n{width} {height}\n255\n")
+
+    for c in range(width):
+      for r in range(height):
+        ppm_file.write(f"{c}, {r}, {1} ")
+      ppm_file.write("\n")
+
 def read_image_file(fp):
   """
   Reads an input file for an image and creates a dictionary for the pertinent values.
@@ -57,10 +66,12 @@ if __name__ == "__main__":
     scene_dict = read_image_file(fp)
 
     width, height = int(scene_dict['RES'][0]), int(scene_dict['RES'][1])
+    filename = scene_dict['OUTPUT']
 
-    for c in range(width):
-      for r in range(height):
-        print(f"Pixel Coordinate: ({c}, {r})")
+    write_ppm(filename, width, height)
+    # for c in range(width):
+    #   for r in range(height):
+    #     print(f"Pixel Coordinate: ({c}, {r})")
 
     # Function Main
       # for each pixel (c,r) on screen
