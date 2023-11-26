@@ -28,6 +28,7 @@ def write_ppm(filename: str, width: int, height: int, bg_colour: Tuple[float, fl
     scaled_bg_colour = tuple(int(value * 255) for value in bg_colour)
 
     for c in range(ncols):
+      print(f"\rProgress: {int((c + 1) / ncols * 100)}%", end='', flush=True)
       for r in range(nrows):
         uc = -1*width + width*((2*c) / ncols)
         vr = -1*height + height*((2*r) / nrows)
@@ -37,6 +38,7 @@ def write_ppm(filename: str, width: int, height: int, bg_colour: Tuple[float, fl
         else:
           ppm_file.write(f"{scaled_bg_colour[0]}, {scaled_bg_colour[1]}, {scaled_bg_colour[2]} ")
       ppm_file.write("\n")
+    print("\nProcessing complete", flush=True)
 
 def read_image_file(fp: str):
   """
