@@ -103,6 +103,18 @@ class Vector:
     """
     return Vector(self.e[0] * t, self.e[1] * t, self.e[2] * t)
 
+  def __rmul__(self, scalar: float) -> 'Vector':
+    """
+    Multiply a scalar by the vector (commutative).
+
+    Parameters:
+    - scalar (float): The scalar factor.
+
+    Returns:
+    Vector: A new Vector representing the result of scalar multiplication.
+    """
+    return self.__mul__(scalar)
+
   def __imul__(self, t: float) -> 'Vector':
     """
     In-place multiplication by a scalar.
