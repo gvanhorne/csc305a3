@@ -57,9 +57,9 @@ class Sphere:
         Sphere: Initialized Sphere object.
         """
         name = input_string[0]
-        position = Vector(map(float, input_string[1:4]))
-        scaling = Vector(map(float, input_string[4:7]))
-        color = Colour(map(float, input_string[7:10]))
+        position = Vector(*map(float, input_string[1:4]))
+        scaling = Vector(*map(float, input_string[4:7]))
+        color = Colour(*map(float, input_string[7:10]))
         ka, kd, ks, kr, n = map(float, input_string[10:])
         return cls(name, position, scaling, color, ka, kd, ks, kr, n)
 
