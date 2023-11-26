@@ -36,6 +36,30 @@ class Vector:
     """Set the i-th component to the given value."""
     self.e[i] = value
 
+  def __add__(self, v: 'Vector') -> 'Vector':
+    """
+    Override the addition operation for Vector instances.
+
+    Parameters:
+    - other (Vector): The Vector to add.
+
+    Returns:
+    Vector: A new Vector representing the result of the addition.
+    """
+    return Vector(self.e[0] + v.e[0], self.e[1] + v.e[1], self.e[2] + v.e[2])
+
+  def __sub__(self, v: 'Vector') -> 'Vector':
+    """
+    Override the subtraction operation for Vector instances.
+
+    Parameters:
+    - v ('Vector'): The Vector to subtract
+
+    Returns:
+    Vector: A new Vector representing the result of the subtraction.
+    """
+    return Vector(self.e[0] - v.e[0], self.e[1] - v.e[1], self.e[2] - v.e[2])
+  
   def __iadd__(self, v: 'Vector') -> 'Vector':
     """
     In-place addition with another Vector.
@@ -51,6 +75,34 @@ class Vector:
     self.e[2] += v.e[2]
     return self
 
+  def __isub__(self, v: 'Vector') -> 'Vector':
+    """
+    In-place subtraction with another Vector
+
+    Parameters:
+    - v ('Vector'): Another Vector object.
+
+    Returns:
+    'Vector': The resulting Vector after subtraction.
+    """
+    self.e[0] -= v.e[0]
+    self.e[1] -= v.e[1]
+    self.e[2] -= v.e[2]
+    return self
+
+
+  def __mul__(self, t: float) -> 'Vector':
+    """
+    Multiply the vector by a scalar.
+
+    Parameters:
+    - t (float): The scalar factor.
+
+    Returns:
+    Vector: A new Vector representing the result of scalar multiplication.
+    """
+    return Vector(self.e[0] * t, self.e[1] * t, self.e[2] * t)
+
   def __imul__(self, t: float) -> 'Vector':
     """
     In-place multiplication by a scalar.
@@ -65,6 +117,18 @@ class Vector:
     self.e[1] *= t
     self.e[2] *= t
     return self
+
+  def __truediv__(self, t: float) -> 'Vector':
+    """
+    Divide the vector by a scalar.
+
+    Parameters:
+    - t (float): The scalar divisor.
+
+    Returns:
+    Vector: A new Vector representing the result of scalar division.
+    """
+    return self.__mul__(1/t)
 
   def __itruediv__(self, t: float) -> 'Vector':
     """
