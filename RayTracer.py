@@ -1,8 +1,11 @@
 import sys
 from typing import List, Tuple
 from sphere import Sphere
+from ray import Ray
+from vector import Vector
+from colour import Colour
 
-def write_ppm(filename: str, width: int, height: int, bg_colour: Tuple[float, float, float], near: float, spheres: List[Sphere]):
+def write_ppm(filename: str, width: int, height: int, bg_colour: Colour, near: float, spheres: List[Sphere]):
   """
   Write out a PPM image file.
 
@@ -10,7 +13,7 @@ def write_ppm(filename: str, width: int, height: int, bg_colour: Tuple[float, fl
   - filename (str): The name of the PPM file to be created.
   - width (int): The width of the image in pixels.
   - height (int): The height of the image in pixels.
-  - bg_colour (Tuple[float, float, float]): The color of the background represented as RGB values in the range [0, 1].
+  - bg_colour (Colour): The colour of the background represented as RGB values in the range [0, 1].
   - near (float): Absolute distance from the eye to the image plane along the negative z axis.
 
   Returns:
@@ -24,19 +27,17 @@ def write_ppm(filename: str, width: int, height: int, bg_colour: Tuple[float, fl
   with open(filename, 'w') as ppm_file:
     ppm_file.write(f"P3\n{ncols} {nrows}\n255\n")
 
-    # Convert background color values to the 0-255 range
-    scaled_bg_colour = tuple(int(value * 255) for value in bg_colour)
-
     for c in range(ncols):
       print(f"\rProgress: {int((c + 1) / ncols * 100)}%", end='', flush=True)
       for r in range(nrows):
         uc = -1*width + width*((2*c) / ncols)
         vr = -1*height + height*((2*r) / nrows)
-        camera_coordinates = (uc, vr, -1*near)
+        # camera_coordinates = (uc, vr, -1*near)
+        # ray = Ray((0,0,0), (-1*near, uc, vr))
         if uc == 0 or vr == 0:
           ppm_file.write(f"{0}, {0}, {0} ")
         else:
-          ppm_file.write(f"{scaled_bg_colour[0]}, {scaled_bg_colour[1]}, {scaled_bg_colour[2]} ")
+          ppm_file.write(f"{bg_colour.r*255}, {bg_colour.g*255}, {bg_colour.b*255} ")
       ppm_file.write("\n")
     print("\nProcessing complete", flush=True)
 
@@ -106,7 +107,7 @@ if __name__ == "__main__":
     ncols, nrows = int(scene_dict['RES'][0]), int(scene_dict['RES'][1])
     near = float(scene_dict['NEAR'])
     filename = scene_dict['OUTPUT']
-    bg_colour = (scene_dict['BACK'][0], scene_dict['BACK'][1], scene_dict['BACK'][2])
+    bg_colour = Colour(*scene_dict['BACK'])
     for sphere in scene_dict['SPHERES']:
       spheres.append(Sphere.from_array(sphere))
 
