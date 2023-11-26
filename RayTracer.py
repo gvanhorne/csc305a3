@@ -1,11 +1,12 @@
 import sys
-from typing import List, Tuple
+from typing import List
 from sphere import Sphere
 from ray import Ray
 from vector import Vector
 from colour import Colour
+Point = Vector
 
-def write_ppm(filename: str, width: int, height: int, bg_colour: Colour, near: float, spheres: List[Sphere]):
+def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: Colour, near: float, spheres: List[Sphere]):
   """
   Write out a PPM image file.
 
@@ -22,22 +23,38 @@ def write_ppm(filename: str, width: int, height: int, bg_colour: Colour, near: f
   Example usage:
   >>> write_ppm('output.ppm', 3, 2, (1.0, 0.0, 0.0))
   """
-  width, height = 2*ncols, 2*nrows
+  image_width = ncols
+  image_height = nrows
 
+  # Camera
+  focal_length = near
+  viewport_height = 2.0
+  viewport_width = viewport_height * (image_width / image_height)
+  camera_center = Point(0, 0, 0)
+
+  # Calculate the vectors across the horizontal and down the vertical viewport edges.
+  viewport_u = Vector(viewport_width, 0, 0)
+  viewport_v = Vector(0, -viewport_height, 0)
+
+  # Calculate the location of the upper left pixel.
+  pixel_delta_u = viewport_u / image_width
+  pixel_delta_v = viewport_v / image_height
+
+  # Calculate the location of the upper left pixel.
+  viewport_upper_left = camera_center - Point(0, 0, focal_length) - viewport_u/2 - viewport_v/2
+  pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v)
+ 
   with open(filename, 'w') as ppm_file:
     ppm_file.write(f"P3\n{ncols} {nrows}\n255\n")
 
-    for c in range(ncols):
-      print(f"\rProgress: {int((c + 1) / ncols * 100)}%", end='', flush=True)
-      for r in range(nrows):
-        uc = -1*width + width*((2*c) / ncols)
-        vr = -1*height + height*((2*r) / nrows)
-        # camera_coordinates = (uc, vr, -1*near)
-        # ray = Ray((0,0,0), (-1*near, uc, vr))
-        if uc == 0 or vr == 0:
-          ppm_file.write(f"{0}, {0}, {0} ")
-        else:
-          ppm_file.write(f"{bg_colour.r*255}, {bg_colour.g*255}, {bg_colour.b*255} ")
+    for j in range(image_height):
+      print(f"\rProgress: {int((j + 1) / nrows * 100)}%", end='', flush=True)
+      for i in range(image_width):
+        pixel_center = pixel00_loc + (i * pixel_delta_u) + (j * pixel_delta_v)
+        ray_direction = pixel_center - camera_center
+        ray = Ray(camera_center, ray_direction)
+        pixel_colour = ray.get_colour()
+        ppm_file.write(f"{pixel_colour.r*255}, {pixel_colour.g*255}, {pixel_colour.b*255} ")
       ppm_file.write("\n")
     print("\nProcessing complete", flush=True)
 
