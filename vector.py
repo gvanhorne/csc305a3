@@ -86,6 +86,15 @@ class Vector:
     """Return the squared length of the vector."""
     return self.e[0]**2 + self.e[1]**2 + self.e[2]**2
 
+  def __repr__(self) -> str:
+    """
+    Return a string representation of the Vector object.
+
+    Returns:
+    str: A string containing the representation of the Vector object.
+    """
+    return f"Vector({self.e[0]}, {self.e[1]}, {self.e[2]})"
+
 def dot(u: Vector, v: Vector) -> float:
     """
     Calculate the dot product of two Vector vectors.
@@ -114,7 +123,7 @@ def cross(u: Vector, v: Vector) -> Vector:
 
 def unit_vector(v: Vector) -> Vector:
     """
-    Return the unit vector of a Vector vector.
+    Return the unit vector of a Vector.
 
     Parameters:
     - v (Vector): The input vector.
