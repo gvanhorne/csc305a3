@@ -1,7 +1,8 @@
 import sys
 from typing import List, Tuple
+from sphere import Sphere
 
-def write_ppm(filename: str, width: int, height: int, bg_colour: Tuple[float, float, float], near: float):
+def write_ppm(filename: str, width: int, height: int, bg_colour: Tuple[float, float, float], near: float, spheres: List[Sphere]):
   """
   Write out a PPM image file.
 
@@ -98,12 +99,16 @@ if __name__ == "__main__":
         sys.exit(1)
     fp = sys.argv[1]
     scene_dict = read_image_file(fp)
+    spheres = []
 
     ncols, nrows = int(scene_dict['RES'][0]), int(scene_dict['RES'][1])
     near = float(scene_dict['NEAR'])
     filename = scene_dict['OUTPUT']
     bg_colour = (scene_dict['BACK'][0], scene_dict['BACK'][1], scene_dict['BACK'][2])
-    write_ppm(filename, ncols, nrows, bg_colour, near)
+    for sphere in scene_dict['SPHERES']:
+      spheres.append(Sphere.from_array(sphere))
+
+    write_ppm(filename, ncols, nrows, bg_colour, near, spheres)
     # for c in range(width):
     #   for r in range(height):
     #     print(f"Pixel Coordinate: ({c}, {r})")
