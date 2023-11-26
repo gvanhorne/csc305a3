@@ -22,5 +22,5 @@ class Ray:
     Returns:
     tuple: A Vector representing the (x, y, z) coordinates of the point along the ray at parameter t.
     """
-    scaled_direction = Vector(t * self.direction.x, t * self.direction.y, t * self.direction.z)
-    return Vector(self.origin.x + scaled_direction.x, self.origin.y + scaled_direction.y, self.origin.z + scaled_direction.z)
+    scaled_direction = Vector(t * self.direction.x(), t * self.direction.y(), t * self.direction.z())
+    return Vector(self.origin.x() + scaled_direction.x(), self.origin.y() + scaled_direction.y(), self.origin.z() + scaled_direction.z())
