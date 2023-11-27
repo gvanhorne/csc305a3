@@ -2,11 +2,8 @@ import sys
 from typing import List
 from sphere import Sphere
 from ray import Ray
-from vector import Vector, dot, scale, inverse_scaling_vector
 from colour import Colour
-from math import sqrt
 import numpy as np
-Point = Vector
 
 # bool hit_sphere(const point3& center, double radius, const ray& r) {
 #     vec3 oc = r.origin() - center;
@@ -17,17 +14,17 @@ Point = Vector
 #     return (discriminant >= 0);
 # }
 
-def hit_sphere(center: Vector, radius: float, ray: Ray):
+def hit_sphere(center: np.array, radius: float, ray: Ray):
   oc = ray.origin - center
-  a = dot(ray.direction, ray.direction)
-  b = 2.0 * dot(oc, ray.direction)
-  c = dot(oc, oc) - radius*radius
+  a = np.dot(ray.direction, ray.direction)
+  b = 2.0 * np.dot(oc, ray.direction)
+  c = np.dot(oc, oc) - radius*radius
   discriminant = b*b - 4*a*c
 
   if discriminant < 0:
     return -1
   else:
-    return (-b - sqrt(discriminant)) / (2.0*a)
+    return (-b - np.sqrt(discriminant)) / (2.0*a)
   # if (discriminant < 0) {
   #       return -1.0;
   #   } else {
@@ -92,20 +89,11 @@ def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: Colour, near: fl
 
           intersection = hit_sphere(np.array([0, 0, 0]), 1, inverse_transformed_ray)
           if intersection > 0:
+            # surface_normal = inverse_transformed_ray.direction / np.linalg.norm(inverse_transformed_ray.at(intersection) - np.array([0, 0, -1]))
+            # pixel_colour = 0.5*Colour(surface_normal[0]+1, surface_normal[1]+1, surface_normal[2]+1)
             pixel_colour = Colour(sphere.colour.r, sphere.colour.g, sphere.colour.b)
 
         ppm_file.write(f"{pixel_colour.r*255}, {pixel_colour.g*255}, {pixel_colour.b*255} ")
-        # pixel_colour = ray.get_colour()
-        # ppm_file.write(f"{pixel_colour.r*255}, {pixel_colour.g*255}, {pixel_colour.b*255} ")
-        # sphere = spheres[0]
-        # inverse_scale = inverse_scaling_vector(spheres[0].scaling)
-        # inverse_ray = Ray(ray.origin, scale(ray.direction, inverse_scale))
-        # intersection = hit_sphere(spheres[0].position, 1, inverse_ray)
-        # if (intersection > 0):
-        #   pixel_colour = Colour(spheres[0].colour.r, spheres[0].colour.g, spheres[0].colour.b)
-        # else:
-        #   pixel_colour = bg_colour
-        # ppm_file.write(f"{pixel_colour.r*255}, {pixel_colour.g*255}, {pixel_colour.b*255} ")
       ppm_file.write("\n")
     print("\nProcessing complete", flush=True)
 
