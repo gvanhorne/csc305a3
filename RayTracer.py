@@ -83,16 +83,17 @@ def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: Colour, near: fl
         pixel_center = pixel00_loc + (i * pixel_delta_u) + (j * pixel_delta_v)
         ray_direction = pixel_center - camera_center
         ray = Ray(camera_center, ray_direction)
-        inverse_transformed_ray = Ray(np.dot(sphere.inverse_transform, np.append(ray.origin, 1)), np.dot(sphere.inverse_transform, np.append(ray.direction, 0)))
-        # Drop the homogeneous points
-        inverse_transformed_ray.origin = inverse_transformed_ray.origin[:-1]
-        inverse_transformed_ray.diretion = inverse_transformed_ray.direction[:-1]
+        pixel_colour = bg_colour
+        for sphere in spheres:
+          inverse_transformed_ray = Ray(np.dot(sphere.inverse_transform, np.append(ray.origin, 1)), np.dot(sphere.inverse_transform, np.append(ray.direction, 0)))
+          # Drop the homogeneous points
+          inverse_transformed_ray.origin = inverse_transformed_ray.origin[:-1]
+          inverse_transformed_ray.direction = inverse_transformed_ray.direction[:-1]
 
-        intersection = hit_sphere(sphere.position, 1, inverse_transformed_ray)
-        if intersection > 0:
-          pixel_colour = Colour(spheres[0].colour.r, spheres[0].colour.g, spheres[0].colour.b)
-        else:
-          pixel_colour = bg_colour
+          intersection = hit_sphere(np.array([0, 0, 0]), 1, inverse_transformed_ray)
+          if intersection > 0:
+            pixel_colour = Colour(sphere.colour.r, sphere.colour.g, sphere.colour.b)
+
         ppm_file.write(f"{pixel_colour.r*255}, {pixel_colour.g*255}, {pixel_colour.b*255} ")
         # pixel_colour = ray.get_colour()
         # ppm_file.write(f"{pixel_colour.r*255}, {pixel_colour.g*255}, {pixel_colour.b*255} ")
