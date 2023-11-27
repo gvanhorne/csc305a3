@@ -2,9 +2,26 @@ import sys
 from typing import List
 from sphere import Sphere
 from ray import Ray
-from vector import Vector
+from vector import Vector, dot, scale, inverse_scaling_vector
 from colour import Colour
 Point = Vector
+
+# bool hit_sphere(const point3& center, double radius, const ray& r) {
+#     vec3 oc = r.origin() - center;
+#     auto a = dot(r.direction(), r.direction());
+#     auto b = 2.0 * dot(oc, r.direction());
+#     auto c = dot(oc, oc) - radius*radius;
+#     auto discriminant = b*b - 4*a*c;
+#     return (discriminant >= 0);
+# }
+
+def hit_sphere(center: Vector, radius: float, ray: Ray):
+  oc = ray.origin - center
+  a = dot(ray.direction, ray.direction)
+  b = 2.0 * dot(oc, ray.direction)
+  c = dot(oc, oc) - 0.25
+  discriminant = b*b - 4*a*c
+  return (discriminant >= 0)
 
 def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: Colour, near: float, spheres: List[Sphere]):
   """
@@ -53,7 +70,12 @@ def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: Colour, near: fl
         pixel_center = pixel00_loc + (i * pixel_delta_u) + (j * pixel_delta_v)
         ray_direction = pixel_center - camera_center
         ray = Ray(camera_center, ray_direction)
-        pixel_colour = ray.get_colour()
+        inverse_scale = inverse_scaling_vector(spheres[0].scaling)
+        inverse_ray = Ray(ray.origin, scale(ray.direction, inverse_scale))
+        if (hit_sphere(spheres[0].position, 0.5, inverse_ray)):
+          pixel_colour = Colour(1, 0, 0)
+        else:
+          pixel_colour = ray.get_colour()
         ppm_file.write(f"{pixel_colour.r*255}, {pixel_colour.g*255}, {pixel_colour.b*255} ")
       ppm_file.write("\n")
     print("\nProcessing complete", flush=True)

@@ -208,3 +208,18 @@ def unit_vector(v: Vector) -> Vector:
     Vector: The unit vector of the input vector.
     """
     return v / v.length()
+
+def inverse_scaling_vector(v):
+    """
+    Calculate the inverse scaling vector.
+
+    Parameters:
+    - scaling_vector (tuple or list): The original scaling vector (sx, sy, sz).
+
+    Returns:
+    tuple: The inverse scaling vector.
+    """
+    return Vector(1 / v[0], 1 / v[1], 1 / v[2])
+
+def scale(u: Vector, v: Vector) -> Vector:
+  return Vector(u[0]*v[0], u[1]*v[1], u[2]*v[2])
