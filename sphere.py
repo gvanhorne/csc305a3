@@ -1,4 +1,4 @@
-from vector import Vector
+import numpy as np
 from colour import Colour
 
 class Sphere:
@@ -7,17 +7,18 @@ class Sphere:
 
     Attributes:
     - name (str): String for the name to be used by the sphere
-    - position (Vector): Vector representing the position (x, y, z) of the sphere.
-    - scaling (Vector): Vector representing the non-uniform scaling factors (sx, sy, sz) of the sphere.
+    - position (np.array): NumPy array representing the position (x, y, z) of the sphere.
+    - scaling (np.array): NumPy array representing the non-uniform scaling factors (sx, sy, sz) of the sphere.
     - colour (Colour): The colour (r, g, b) of the sphere.
     - ka (float): Coefficient for ambient reflection.
     - kd (float): Coefficient for diffuse reflection.
     - ks (float): Coefficient for specular reflection.
     - kr (float): Coefficient for reflection.
     - n (int): Specular exponent.
+    - transformation_matrix (np.array): 4x4 transformation matrix for transformation.
 
     Example:
-    >>> sphere = Sphere(position=(0.0, 0.0, -5.0), scaling=(1.0, 1.0, 1.0), colour=(1.0, 0.0, 0.0),
+    >>> sphere = Sphere(name='example', position=np.array([0.0, 0.0, -5.0]), scaling=np.array([1.0, 1.0, 1.0]), colour=Colour(1.0, 0.0, 0.0),
     ...                 ka=0.1, kd=0.7, ks=0.2, kr=0.1, n=10)
     """
 
@@ -26,8 +27,8 @@ class Sphere:
         Initializes a Sphere object with the provided attributes.
 
         Parameters:
-        - position (Vector): Vector representing the position (x, y, z) of the sphere.
-        - scaling (Vector): Vector representing the non-uniform scaling factors (sx, sy, sz) of the sphere.
+        - position (np.array): NumPy array representing the position (x, y, z) of the sphere.
+        - scaling (np.array): NumPy array representing the non-uniform scaling factors (sx, sy, sz) of the sphere.
         - colour (Colour): The colour (r, g, b) of the sphere.
         - ka (float): Coefficient for ambient reflection.
         - kd (float): Coefficient for diffuse reflection.
@@ -36,14 +37,23 @@ class Sphere:
         - n (int): Specular exponent.
         """
         self.name = name
-        self.position = position
-        self.scaling = scaling
+        self.position = np.array(position)
+        self.scaling = np.array(scaling)
         self.colour = colour
         self.ka = ka
         self.kd = kd
         self.ks = ks
         self.kr = kr
         self.n = n
+        self.transformation_matrix = np.array(
+          [
+            [scaling[0], 0, 0, position[0]],
+            [0, scaling[1], 0, position[1]],
+            [0, 0, scaling[2], position[2]],
+            [0, 0, 0, 1]
+          ]
+        )
+        self.inverse_transform = np.linalg.inv(self.transformation_matrix)
 
     @classmethod
     def from_array(cls, input_string):
@@ -57,8 +67,8 @@ class Sphere:
         Sphere: Initialized Sphere object.
         """
         name = input_string[0]
-        position = Vector(*map(float, input_string[1:4]))
-        scaling = Vector(*map(float, input_string[4:7]))
+        position = np.array([float(x) for x in input_string[1:4]])
+        scaling = np.array([float(x) for x in input_string[4:7]])
         colour = Colour(*map(float, input_string[7:10]))
         ka, kd, ks, kr, n = map(float, input_string[10:])
         return cls(name, position, scaling, colour, ka, kd, ks, kr, n)

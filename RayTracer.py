@@ -5,6 +5,7 @@ from ray import Ray
 from vector import Vector, dot, scale, inverse_scaling_vector
 from colour import Colour
 from math import sqrt
+import numpy as np
 Point = Vector
 
 # bool hit_sphere(const point3& center, double radius, const ray& r) {
@@ -20,7 +21,7 @@ def hit_sphere(center: Vector, radius: float, ray: Ray):
   oc = ray.origin - center
   a = dot(ray.direction, ray.direction)
   b = 2.0 * dot(oc, ray.direction)
-  c = dot(oc, oc) - 0.25
+  c = dot(oc, oc) - radius*radius
   discriminant = b*b - 4*a*c
 
   if discriminant < 0:
@@ -57,20 +58,22 @@ def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: Colour, near: fl
   focal_length = near
   viewport_height = 2.0
   viewport_width = viewport_height * (image_width / image_height)
-  camera_center = Point(0, 0, 0)
+  camera_center = np.array([0, 0, 0])
 
   # Calculate the vectors across the horizontal and down the vertical viewport edges.
-  viewport_u = Vector(viewport_width, 0, 0)
-  viewport_v = Vector(0, -viewport_height, 0)
+  viewport_u = np.array([viewport_width, 0, 0])
+  viewport_v = np.array([0, -viewport_height, 0])
 
   # Calculate the location of the upper left pixel.
   pixel_delta_u = viewport_u / image_width
   pixel_delta_v = viewport_v / image_height
 
   # Calculate the location of the upper left pixel.
-  viewport_upper_left = camera_center - Point(0, 0, focal_length) - viewport_u/2 - viewport_v/2
+  viewport_upper_left = camera_center - np.array([0, 0, focal_length]) - viewport_u/2 - viewport_v/2
   pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v)
  
+  sphere = spheres[0]
+
   with open(filename, 'w') as ppm_file:
     ppm_file.write(f"P3\n{ncols} {nrows}\n255\n")
 
@@ -80,14 +83,28 @@ def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: Colour, near: fl
         pixel_center = pixel00_loc + (i * pixel_delta_u) + (j * pixel_delta_v)
         ray_direction = pixel_center - camera_center
         ray = Ray(camera_center, ray_direction)
-        inverse_scale = inverse_scaling_vector(spheres[0].scaling)
-        inverse_ray = Ray(ray.origin, scale(ray.direction, inverse_scale))
-        intersection = hit_sphere(spheres[0].position, 1, inverse_ray)
-        if (intersection > 0):
+        inverse_transformed_ray = Ray(np.dot(sphere.inverse_transform, np.append(ray.origin, 1)), np.dot(sphere.inverse_transform, np.append(ray.direction, 0)))
+        # Drop the homogeneous points
+        inverse_transformed_ray.origin = inverse_transformed_ray.origin[:-1]
+        inverse_transformed_ray.diretion = inverse_transformed_ray.direction[:-1]
+
+        intersection = hit_sphere(sphere.position, 1, inverse_transformed_ray)
+        if intersection > 0:
           pixel_colour = Colour(spheres[0].colour.r, spheres[0].colour.g, spheres[0].colour.b)
         else:
           pixel_colour = bg_colour
         ppm_file.write(f"{pixel_colour.r*255}, {pixel_colour.g*255}, {pixel_colour.b*255} ")
+        # pixel_colour = ray.get_colour()
+        # ppm_file.write(f"{pixel_colour.r*255}, {pixel_colour.g*255}, {pixel_colour.b*255} ")
+        # sphere = spheres[0]
+        # inverse_scale = inverse_scaling_vector(spheres[0].scaling)
+        # inverse_ray = Ray(ray.origin, scale(ray.direction, inverse_scale))
+        # intersection = hit_sphere(spheres[0].position, 1, inverse_ray)
+        # if (intersection > 0):
+        #   pixel_colour = Colour(spheres[0].colour.r, spheres[0].colour.g, spheres[0].colour.b)
+        # else:
+        #   pixel_colour = bg_colour
+        # ppm_file.write(f"{pixel_colour.r*255}, {pixel_colour.g*255}, {pixel_colour.b*255} ")
       ppm_file.write("\n")
     print("\nProcessing complete", flush=True)
 
