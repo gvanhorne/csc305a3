@@ -4,6 +4,7 @@ from sphere import Sphere
 from ray import Ray
 from vector import Vector, dot, scale, inverse_scaling_vector
 from colour import Colour
+from math import sqrt
 Point = Vector
 
 # bool hit_sphere(const point3& center, double radius, const ray& r) {
@@ -21,7 +22,16 @@ def hit_sphere(center: Vector, radius: float, ray: Ray):
   b = 2.0 * dot(oc, ray.direction)
   c = dot(oc, oc) - 0.25
   discriminant = b*b - 4*a*c
-  return (discriminant >= 0)
+
+  if discriminant < 0:
+    return -1
+  else:
+    return (-b - sqrt(discriminant)) / (2.0*a)
+  # if (discriminant < 0) {
+  #       return -1.0;
+  #   } else {
+  #       return (-b - sqrt(discriminant) ) / (2.0*a);
+  #   }
 
 def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: Colour, near: float, spheres: List[Sphere]):
   """
@@ -72,10 +82,11 @@ def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: Colour, near: fl
         ray = Ray(camera_center, ray_direction)
         inverse_scale = inverse_scaling_vector(spheres[0].scaling)
         inverse_ray = Ray(ray.origin, scale(ray.direction, inverse_scale))
-        if (hit_sphere(spheres[0].position, 0.5, inverse_ray)):
-          pixel_colour = Colour(1, 0, 0)
+        intersection = hit_sphere(spheres[0].position, 1, inverse_ray)
+        if (intersection > 0):
+          pixel_colour = Colour(spheres[0].colour.r, spheres[0].colour.g, spheres[0].colour.b)
         else:
-          pixel_colour = ray.get_colour()
+          pixel_colour = bg_colour
         ppm_file.write(f"{pixel_colour.r*255}, {pixel_colour.g*255}, {pixel_colour.b*255} ")
       ppm_file.write("\n")
     print("\nProcessing complete", flush=True)
@@ -159,13 +170,13 @@ if __name__ == "__main__":
       # for each pixel (c,r) on screen
       #  determine ray rc,r from eye through pixel
       #  ray.setDepth(1)
-      #  color(c,r) = raytrace(rc,r )
+      #  colour(c,r) = raytrace(rc,r )
       # end for
     # end
     # function raytrace(r)
       # if (ray.depth() > MAX_DEPTH) return black
       # P = closest intersection of ray with all objects
-      # if( no intersection ) return backgroundColor
+      # if( no intersection ) return backgroundcolour
       # clocal = Sum(shadowRays(P,Lighti))
       # cre = raytrace(rre)
       # return (clocal+kre*cre)

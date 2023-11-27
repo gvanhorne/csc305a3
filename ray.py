@@ -28,10 +28,10 @@ class Ray:
 
   def get_colour(self) -> Colour:
     """
-    Get the color based on the y direction of the ray.
+    Get the colour based on the y direction of the ray.
 
     Returns:
-    Colour: The computed color based on the direction of the ray.
+    Colour: The computed colour based on the direction of the ray.
     """
     unit_direction = unit_vector(self.direction)
     a = 0.5*(unit_direction.y() + 1.0)
