@@ -7,15 +7,15 @@ import numpy as np
 
 def hit_sphere(center: np.array, radius: float, ray: Ray):
   oc = ray.origin - center
-  a = np.dot(ray.direction, ray.direction)
-  b = 2.0 * np.dot(oc, ray.direction)
-  c = np.dot(oc, oc) - radius*radius
-  discriminant = b*b - 4*a*c
+  a = np.linalg.norm(ray.direction)**2
+  half_b = np.dot(oc, ray.direction)
+  c = np.linalg.norm(oc)**2 - radius*radius
+  discriminant = half_b*half_b - a*c
 
   if discriminant < 0:
     return -1
   else:
-    return (-b - np.sqrt(discriminant)) / (2.0*a)
+    return (-half_b - np.sqrt(discriminant)) / a
 
 def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: Colour, near: float, spheres: List[Sphere]):
   """
@@ -67,14 +67,17 @@ def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: Colour, near: fl
         ray_direction = pixel_center - camera_center
         ray = Ray(camera_center, ray_direction)
         pixel_colour = bg_colour
+        closest_intersect = float('inf')
         for sphere in spheres:
-          inverse_transformed_ray = Ray(np.dot(sphere.inverse_transform, np.append(ray.origin, 1)), np.dot(sphere.inverse_transform, np.append(ray.direction, 0)))
+          inverse_transformed_ray = Ray(np.dot(sphere.inverse_transform, np.append(ray.origin, 1)),
+                                        np.dot(sphere.inverse_transform, np.append(ray.direction, 0)))
           # Drop the homogeneous points
           inverse_transformed_ray.origin = inverse_transformed_ray.origin[:-1]
           inverse_transformed_ray.direction = inverse_transformed_ray.direction[:-1]
 
           intersection = hit_sphere(np.array([0, 0, 0]), 1, inverse_transformed_ray)
-          if intersection > 0:
+          if intersection > 0 and intersection < closest_intersect:
+            closest_intersect = intersection
             # surface_normal = inverse_transformed_ray.direction / np.linalg.norm(inverse_transformed_ray.at(intersection) - np.array([0, 0, -1]))
             # pixel_colour = 0.5*Colour(surface_normal[0]+1, surface_normal[1]+1, surface_normal[2]+1)
             pixel_colour = Colour(sphere.colour.r, sphere.colour.g, sphere.colour.b)
