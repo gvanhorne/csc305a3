@@ -5,15 +5,6 @@ from ray import Ray
 from colour import Colour
 import numpy as np
 
-# bool hit_sphere(const point3& center, double radius, const ray& r) {
-#     vec3 oc = r.origin() - center;
-#     auto a = dot(r.direction(), r.direction());
-#     auto b = 2.0 * dot(oc, r.direction());
-#     auto c = dot(oc, oc) - radius*radius;
-#     auto discriminant = b*b - 4*a*c;
-#     return (discriminant >= 0);
-# }
-
 def hit_sphere(center: np.array, radius: float, ray: Ray):
   oc = ray.origin - center
   a = np.dot(ray.direction, ray.direction)
@@ -25,11 +16,6 @@ def hit_sphere(center: np.array, radius: float, ray: Ray):
     return -1
   else:
     return (-b - np.sqrt(discriminant)) / (2.0*a)
-  # if (discriminant < 0) {
-  #       return -1.0;
-  #   } else {
-  #       return (-b - sqrt(discriminant) ) / (2.0*a);
-  #   }
 
 def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: Colour, near: float, spheres: List[Sphere]):
   """
@@ -68,7 +54,7 @@ def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: Colour, near: fl
   # Calculate the location of the upper left pixel.
   viewport_upper_left = camera_center - np.array([0, 0, focal_length]) - viewport_u/2 - viewport_v/2
   pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v)
- 
+
   sphere = spheres[0]
 
   with open(filename, 'w') as ppm_file:
@@ -125,15 +111,15 @@ def read_image_file(fp: str):
   """
   try:
     scene_dict = {'SPHERES': [], 'LIGHTS': []}
-  
+
     with open(fp, 'r') as f:
       for line in f:
         line = line.strip().split()
-        
+
         # Skip empty lines
         if not line:
             continue
-        
+
         key = line[0]
         if (len(line) == 2):
           value = line[1]
@@ -146,10 +132,10 @@ def read_image_file(fp: str):
           scene_dict['LIGHTS'].append(value)
         else:
           scene_dict[key] = value
-        
+
   except FileNotFoundError:
       print(f"Error: File '{fp}' not found.")
-    
+
   return scene_dict
 
 if __name__ == "__main__":
@@ -168,22 +154,3 @@ if __name__ == "__main__":
       spheres.append(Sphere.from_array(sphere))
 
     write_ppm(filename, ncols, nrows, bg_colour, near, spheres)
-    # for c in range(width):
-    #   for r in range(height):
-    #     print(f"Pixel Coordinate: ({c}, {r})")
-
-    # Function Main
-      # for each pixel (c,r) on screen
-      #  determine ray rc,r from eye through pixel
-      #  ray.setDepth(1)
-      #  colour(c,r) = raytrace(rc,r )
-      # end for
-    # end
-    # function raytrace(r)
-      # if (ray.depth() > MAX_DEPTH) return black
-      # P = closest intersection of ray with all objects
-      # if( no intersection ) return backgroundcolour
-      # clocal = Sum(shadowRays(P,Lighti))
-      # cre = raytrace(rre)
-      # return (clocal+kre*cre)
-    # end
