@@ -5,6 +5,29 @@ from ray import Ray
 from colour import Colour
 import numpy as np
 
+# vec4 ads(vec3 pos, vec3 lpos, vec3 N) {
+#   vec3 L = normalize(lpos - pos) ;
+#   vec3 V = normalize(-pos) ;
+#   vec3 R = reflect(-L, N) ;
+
+#   // Compute terms in the illumination equation
+#   float lightDotNormal = max( dot(L, N), 0.0 );
+#   vec4 diffuse = vec4(0.0, 0.0, 0.0, 1.0);
+#   diffuse = diffuseProduct * lightDotNormal;
+#   float reflectedDotViewShiny = pow( max(dot(R, V), 0.0), shininess );
+#   vec4 specular = vec4(0.0, 0.0, 0.0, 1.0);
+
+#   specular = specularProduct * reflectedDotViewShiny;
+#   if( dot(L, N) < 0.0 ) {
+#   specular = vec4(0.0, 0.0, 0.0, 1.0); }
+#   vec4 color = ambientProduct + diffuse + specular; color.a = 1.0 ;
+#   return color ;
+# }
+
+def ads(pos: np.array, lpos: np.array, N: np.array):
+  return None
+
+
 def hit_sphere(center: np.array, radius: float, ray: Ray):
   oc = ray.origin - center
   a = np.linalg.norm(ray.direction)**2
