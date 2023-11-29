@@ -6,23 +6,40 @@ from light import Light
 import numpy as np
 import time
 
+def reflect(ray: Ray, t: float):
+  c = ray.direction
+  N = normalize(ray.direction)
+  return -2*(np.dot(N, c))*N + ray.direction
+
 def normalize(v: np.array):
   norm = np.linalg.norm(v)
   unit_vector = v / norm
   return unit_vector
 
-def ads_lighting(N: np.array, sphere: Sphere, lights: List[Light], ambient: np.array):
+def ads_lighting(pos: np.array, N: np.array, sphere: Sphere, lights: List[Light], ambient: np.array):
   total_diffuse = np.zeros_like(ambient)
-  for light in lights:
 
-    diffuse_strength = np.maximum(0.0, np.dot(light.position, N))
-    diffuse = diffuse_strength * light.intensity
+  for light in lights:
+    L = normalize(light.position - pos)
+
+    light_dot_normal = np.maximum(np.dot(L, N), 0.0)
+    diffuse = sphere.kd * light_dot_normal
     total_diffuse += diffuse
 
-  total_diffuse = np.clip(total_diffuse, 0, 1)
-  lighting = ambient*sphere.ka + total_diffuse*sphere.kd
+  lighting = sphere.ka*ambient + total_diffuse
   colour = lighting * sphere.colour
   return colour
+  # total_diffuse = np.zeros_like(ambient)
+  # for light in lights:
+
+  #   diffuse_strength = np.maximum(0.0, np.dot(light.position, N))
+  #   diffuse = diffuse_strength * light.intensity
+  #   total_diffuse += diffuse
+
+  # # total_diffuse = np.clip(total_diffuse, 0, 1)
+  # lighting = ambient*sphere.ka + total_diffuse*sphere.kd
+  # colour = lighting * sphere.colour
+  # return colour
 
 
 def hit_sphere(center: np.array, radius: float, ray: Ray):
@@ -90,21 +107,35 @@ def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: np.array, near: 
         pixel_colour = bg_colour
         closest_intersect = float('inf')
         for sphere in spheres:
-          inverse_transformed_ray = Ray(np.dot(sphere.inverse_transform, np.append(ray.origin, 1)),
-                                        np.dot(sphere.inverse_transform, np.append(ray.direction, 0)))
+
+          # Inverse transform ray and get S' + c't
+          inverse_transformed_ray = Ray(np.matmul(sphere.inverse_transform, np.append(ray.origin, 1)),
+                                        np.matmul(sphere.inverse_transform, np.append(ray.direction, 0)))
           # Drop the homogeneous points
           inverse_transformed_ray.origin = inverse_transformed_ray.origin[:-1]
           inverse_transformed_ray.direction = inverse_transformed_ray.direction[:-1]
 
+          # Find the intersection t_h between inv-ray and canonical object
           t1, t2 = hit_sphere(np.array([0, 0, 0]), 1, inverse_transformed_ray) # Canonical sphere intersected with inv-ray
           if t1 > 0 and t1 < closest_intersect:
+            # Use t_h in the untransformed ray S + ct to find the intersection
             closest_intersect = t1
-            surface_point = np.append(ray.at(t1), 0)
+            intersection_point = ray.at(t1)
+            unit_normal = normalize(intersection_point - sphere.position)
+            ambient_colour = ambient * sphere.ka
+            total_diffuse = np.array([0.0, 0.0, 0.0])
 
-            normal = (surface_point - np.append(sphere.position, 0))
-            normal = np.matmul(normal, np.transpose(sphere.inverse_transform))
-            normal = normal[:-1]
-            pixel_colour = ads_lighting(normal, sphere, lights, ambient)
+            for light in lights:
+              light_dir = np.subtract(light.position, intersection_point)
+              unit_light_dir = normalize(light_dir)
+              diffuse = np.array([0.0, 0.0, 0.0])
+              diffuse[0] = sphere.kd * np.maximum(0, np.dot(unit_light_dir, unit_normal)) * light.intensity[0]
+              diffuse[1] = sphere.kd * np.maximum(0, np.dot(unit_light_dir, unit_normal)) * light.intensity[1]
+              diffuse[2] = sphere.kd * np.maximum(0, np.dot(unit_light_dir, unit_normal)) * light.intensity[2]
+              total_diffuse += diffuse
+
+            lighting = ambient_colour + total_diffuse
+            pixel_colour = lighting * sphere.colour
 
         ppm_file.write(f"{pixel_colour[0]*255}, {pixel_colour[1]*255}, {pixel_colour[2]*255} ")
       ppm_file.write("\n")
