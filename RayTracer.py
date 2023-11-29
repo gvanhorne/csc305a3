@@ -2,7 +2,7 @@ import sys
 from typing import List
 from sphere import Sphere
 from ray import Ray
-from colour import Colour
+from light import Light
 import numpy as np
 
 # vec4 ads(vec3 pos, vec3 lpos, vec3 N) {
@@ -24,8 +24,41 @@ import numpy as np
 #   return color ;
 # }
 
-def ads(pos: np.array, lpos: np.array, N: np.array):
-  return None
+def ads_lighting(pos: np.array, lpos: np.array, N: np.array, ambient_color: np.array, diffuse_color: np.array, specular_color: np.array, shininess: float):
+    """
+    Calculate ambient, diffuse, and specular lighting using the Phong reflection model.
+
+    Parameters:
+    - pos: Position of the point in 3D space.
+    - lpos: Position of the light source in 3D space.
+    - N: Normal vector at the point.
+    - ambient_color: Color of the ambient light.
+    - diffuse_color: Color of the diffuse light.
+    - specular_color: Color of the specular light.
+    - shininess: Shininess coefficient for specular reflection.
+
+    Returns:
+    - Final color at the point.
+    """
+    # Calculate ambient component
+    ambient = ambient_color
+
+    # Calculate diffuse component
+    L = np.linalg.norm(lpos - pos)
+    diffuse = max(np.dot(N, L), 0) * diffuse_color
+
+    # Calculate specular component
+    R = 2 * np.dot(N, L) * N - L
+    V = np.linalg.norm(np.array([0, 0, 1]) - pos)  # Assuming view direction is (0, 0, 1)
+    specular = max(np.dot(R, V), 0) ** shininess * specular_color
+
+    # Sum up all components
+    result_color = ambient + diffuse + specular
+
+    # Ensure the color values are in the valid range [0, 1]
+    result_color = np.clip(result_color, 0, 1)
+
+    return result_color
 
 
 def hit_sphere(center: np.array, radius: float, ray: Ray):
@@ -40,7 +73,7 @@ def hit_sphere(center: np.array, radius: float, ray: Ray):
   else:
     return (-half_b - np.sqrt(discriminant)) / a
 
-def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: Colour, near: float, spheres: List[Sphere]):
+def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: np.array, near: float, spheres: List[Sphere], lights: List[Light]):
   """
   Write out a PPM image file.
 
@@ -84,7 +117,8 @@ def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: Colour, near: fl
     ppm_file.write(f"P3\n{ncols} {nrows}\n255\n")
 
     for j in range(image_height):
-      print(f"\rProgress: {int((j + 1) / nrows * 100)}%", end='', flush=True)
+      progress_percentage = np.ceil((j + 1) / nrows * 100)
+      print(f"\rProgress: {int(progress_percentage)}%", end='', flush=True)
       for i in range(image_width):
         pixel_center = pixel00_loc + (i * pixel_delta_u) + (j * pixel_delta_v)
         ray_direction = pixel_center - camera_center
@@ -102,10 +136,11 @@ def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: Colour, near: fl
           if intersection > 0 and intersection < closest_intersect:
             closest_intersect = intersection
             # surface_normal = inverse_transformed_ray.direction / np.linalg.norm(inverse_transformed_ray.at(intersection) - np.array([0, 0, -1]))
-            # pixel_colour = 0.5*Colour(surface_normal[0]+1, surface_normal[1]+1, surface_normal[2]+1)
-            pixel_colour = Colour(sphere.colour.r, sphere.colour.g, sphere.colour.b)
+            # pixel_colour = 0.5*np.array([surface_normal[0]+1, surface_normal[1]+1, surface_normal[2]+1])
+            # pixel_colour = ads_lighting(inverse_transformed_ray.at(intersection), )
+            pixel_colour = sphere.colour
 
-        ppm_file.write(f"{pixel_colour.r*255}, {pixel_colour.g*255}, {pixel_colour.b*255} ")
+        ppm_file.write(f"{pixel_colour[0]*255}, {pixel_colour[1]*255}, {pixel_colour[2]*255} ")
       ppm_file.write("\n")
     print("\nProcessing complete", flush=True)
 
@@ -171,12 +206,15 @@ if __name__ == "__main__":
     fp = sys.argv[1]
     scene_dict = read_image_file(fp)
     spheres = []
+    lights = []
 
     ncols, nrows = int(scene_dict['RES'][0]), int(scene_dict['RES'][1])
     near = float(scene_dict['NEAR'])
     filename = scene_dict['OUTPUT']
-    bg_colour = Colour(*scene_dict['BACK'])
+    bg_colour = np.array(scene_dict['BACK'])
     for sphere in scene_dict['SPHERES']:
       spheres.append(Sphere.from_array(sphere))
+    for light in scene_dict['LIGHTS']:
+      lights.append(Light.from_array(light))
 
-    write_ppm(filename, ncols, nrows, bg_colour, near, spheres)
+    write_ppm(filename, ncols, nrows, bg_colour, near, spheres, lights)
