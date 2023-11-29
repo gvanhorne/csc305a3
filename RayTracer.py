@@ -4,6 +4,7 @@ from sphere import Sphere
 from ray import Ray
 from light import Light
 import numpy as np
+import time
 
 # vec4 ads(vec3 pos, vec3 lpos, vec3 N) {
 #   vec3 L = normalize(lpos - pos) ;
@@ -203,6 +204,7 @@ if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("Usage: python3 RayTracer.py <testcase>.txt")
         sys.exit(1)
+    start_time = time.time()
     fp = sys.argv[1]
     scene_dict = read_image_file(fp)
     spheres = []
@@ -218,3 +220,6 @@ if __name__ == "__main__":
       lights.append(Light.from_array(light))
 
     write_ppm(filename, ncols, nrows, bg_colour, near, spheres, lights)
+    end_time = time.time()
+    elapsed_time = round(end_time - start_time)
+    print(f"Elapsed Time: {elapsed_time} seconds", end="")
