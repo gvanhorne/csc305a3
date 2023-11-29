@@ -6,60 +6,44 @@ from light import Light
 import numpy as np
 import time
 
-# vec4 ads(vec3 pos, vec3 lpos, vec3 N) {
-#   vec3 L = normalize(lpos - pos) ;
-#   vec3 V = normalize(-pos) ;
-#   vec3 R = reflect(-L, N) ;
+def normalize(v: np.array):
+  norm = np.linalg.norm(v)
+  unit_vector = v / norm
+  return unit_vector
 
-#   // Compute terms in the illumination equation
-#   float lightDotNormal = max( dot(L, N), 0.0 );
-#   vec4 diffuse = vec4(0.0, 0.0, 0.0, 1.0);
-#   diffuse = diffuseProduct * lightDotNormal;
-#   float reflectedDotViewShiny = pow( max(dot(R, V), 0.0), shininess );
-#   vec4 specular = vec4(0.0, 0.0, 0.0, 1.0);
+def ads_lighting(pos: np.array, lpos: np.array, N: np.array, ambient_product: np.array, diffuse_product: np.array, specular_product: np.array, shininess: float):
+  """
+  Calculate ambient, diffuse, and specular lighting using the Phong reflection model.
 
-#   specular = specularProduct * reflectedDotViewShiny;
-#   if( dot(L, N) < 0.0 ) {
-#   specular = vec4(0.0, 0.0, 0.0, 1.0); }
-#   vec4 color = ambientProduct + diffuse + specular; color.a = 1.0 ;
-#   return color ;
-# }
+  Parameters:
+  - pos: Position of the point in 3D space.
+  - lpos: Position of the light source in 3D space.
+  - N: Normal vector at the point.
+  - ambient_color: Color of the ambient light.
+  - diffuse_color: Color of the diffuse light.
+  - specular_color: Color of the specular light.
+  - shininess: Shininess coefficient for specular reflection.
 
-def ads_lighting(pos: np.array, lpos: np.array, N: np.array, ambient_color: np.array, diffuse_color: np.array, specular_color: np.array, shininess: float):
-    """
-    Calculate ambient, diffuse, and specular lighting using the Phong reflection model.
+  Returns:
+  - Final color at the point.
+  """
+  L = normalize(lpos - pos)
+  V = normalize(-pos)
+  R = 2*(np.dot(N, L))*N - L
 
-    Parameters:
-    - pos: Position of the point in 3D space.
-    - lpos: Position of the light source in 3D space.
-    - N: Normal vector at the point.
-    - ambient_color: Color of the ambient light.
-    - diffuse_color: Color of the diffuse light.
-    - specular_color: Color of the specular light.
-    - shininess: Shininess coefficient for specular reflection.
+  # Compute terms in the illumination equation
+  light_dot_normal = np.maximum(np.dot(L, N), 0.0)
+  diffuse = np.array([0.0, 0.0, 0.0, 1.0])
+  diffuse = diffuse_product * light_dot_normal
+  reflected_dot_view_shiny = np.maximum(np.dot(R, V), 0.0) ** shininess
+  specular = np.array([0.0, 0.0, 0.0, 1.0])
 
-    Returns:
-    - Final color at the point.
-    """
-    # Calculate ambient component
-    ambient = ambient_color
+  specular = specular_product * reflected_dot_view_shiny
+  if (np.dot(L, N) < 0.0):
+    specular = np.array([0.0, 0.0, 0.0])
+  colour = ambient_product + diffuse + specular
 
-    # Calculate diffuse component
-    L = np.linalg.norm(lpos - pos)
-    diffuse = max(np.dot(N, L), 0) * diffuse_color
-
-    # Calculate specular component
-    R = 2 * np.dot(N, L) * N - L
-    V = np.linalg.norm(np.array([0, 0, 1]) - pos)  # Assuming view direction is (0, 0, 1)
-    specular = max(np.dot(R, V), 0) ** shininess * specular_color
-
-    # Sum up all components
-    result_color = ambient + diffuse + specular
-
-    # Ensure the color values are in the valid range [0, 1]
-    result_color = np.clip(result_color, 0, 1)
-
-    return result_color
+  return colour
 
 
 def hit_sphere(center: np.array, radius: float, ray: Ray):
@@ -74,7 +58,7 @@ def hit_sphere(center: np.array, radius: float, ray: Ray):
   else:
     return (-half_b - np.sqrt(discriminant)) / a
 
-def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: np.array, near: float, spheres: List[Sphere], lights: List[Light]):
+def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: np.array, near: float, spheres: List[Sphere], lights: List[Light], ambient: np.array):
   """
   Write out a PPM image file.
 
@@ -112,8 +96,6 @@ def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: np.array, near: 
   viewport_upper_left = camera_center - np.array([0, 0, focal_length]) - viewport_u/2 - viewport_v/2
   pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v)
 
-  sphere = spheres[0]
-
   with open(filename, 'w') as ppm_file:
     ppm_file.write(f"P3\n{ncols} {nrows}\n255\n")
 
@@ -136,10 +118,9 @@ def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: np.array, near: 
           intersection = hit_sphere(np.array([0, 0, 0]), 1, inverse_transformed_ray)
           if intersection > 0 and intersection < closest_intersect:
             closest_intersect = intersection
-            # surface_normal = inverse_transformed_ray.direction / np.linalg.norm(inverse_transformed_ray.at(intersection) - np.array([0, 0, -1]))
-            # pixel_colour = 0.5*np.array([surface_normal[0]+1, surface_normal[1]+1, surface_normal[2]+1])
-            # pixel_colour = ads_lighting(inverse_transformed_ray.at(intersection), )
-            pixel_colour = sphere.colour
+            surface_normal = normalize(ray.at(intersection) - np.array([0, 0, -1]))
+            pixel_colour = sphere.colour * ads_lighting(ray.at(intersection), lights[0].position, surface_normal,
+                                        ambient, sphere.kd, sphere.ks, sphere.n)
 
         ppm_file.write(f"{pixel_colour[0]*255}, {pixel_colour[1]*255}, {pixel_colour[2]*255} ")
       ppm_file.write("\n")
@@ -213,13 +194,14 @@ if __name__ == "__main__":
     ncols, nrows = int(scene_dict['RES'][0]), int(scene_dict['RES'][1])
     near = float(scene_dict['NEAR'])
     filename = scene_dict['OUTPUT']
+    ambient_light = np.array([float(x) for x in scene_dict['AMBIENT']])
     bg_colour = np.array(scene_dict['BACK'])
     for sphere in scene_dict['SPHERES']:
       spheres.append(Sphere.from_array(sphere))
     for light in scene_dict['LIGHTS']:
       lights.append(Light.from_array(light))
 
-    write_ppm(filename, ncols, nrows, bg_colour, near, spheres, lights)
+    write_ppm(filename, ncols, nrows, bg_colour, near, spheres, lights, ambient_light)
     end_time = time.time()
     elapsed_time = round(end_time - start_time)
-    print(f"Elapsed Time: {elapsed_time} seconds", end="")
+    print(f"Elapsed Time: {elapsed_time} seconds", end="", flush=True)
