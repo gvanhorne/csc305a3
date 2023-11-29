@@ -1,5 +1,4 @@
 import numpy as np
-from colour import Colour
 
 class Ray:
   def __init__(self, origin: np.array, direction: np.array):
@@ -26,13 +25,13 @@ class Ray:
     scaled_direction = t * self.direction
     return self.origin + scaled_direction
 
-  def get_colour(self) -> Colour:
+  def get_colour(self) -> np.array:
     """
     Get the colour based on the y direction of the ray.
 
     Returns:
-    Colour: The computed colour based on the direction of the ray.
+    np.array: A NumPy array representings the (r, g, b) components of the computed colour.
     """
     unit_direction = self.direction / np.linalg.norm(self.direction)
     a = 0.5 * (unit_direction[1] + 1.0)
-    return (1.0 - a) * Colour(1.0, 1.0, 1.0) + a * Colour(0.5, 0.7, 1.0)
+    return (1.0 - a) * np.array([1.0, 1.0, 1.0]) + a * np.array([0.5, 0.7, 1.0])
