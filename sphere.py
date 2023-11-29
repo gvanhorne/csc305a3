@@ -72,6 +72,9 @@ class Sphere:
         ka, kd, ks, kr, n = map(float, input_string[10:])
         return cls(name, position, scaling, colour, ka, kd, ks, kr, n)
 
+    def get_normal(self, surface_point):
+      return np.subtract(surface_point, self.position)
+
     def __str__(self):
         """
         Returns a string representation of the Sphere object.

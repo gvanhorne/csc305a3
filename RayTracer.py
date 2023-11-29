@@ -11,52 +11,33 @@ def normalize(v: np.array):
   unit_vector = v / norm
   return unit_vector
 
-def ads_lighting(pos: np.array, lpos: np.array, N: np.array, ambient_product: np.array, diffuse_product: np.array, specular_product: np.array, shininess: float):
-  """
-  Calculate ambient, diffuse, and specular lighting using the Phong reflection model.
+def ads_lighting(N: np.array, sphere: Sphere, lights: List[Light], ambient: np.array):
+  total_diffuse = np.zeros_like(ambient)
+  for light in lights:
 
-  Parameters:
-  - pos: Position of the point in 3D space.
-  - lpos: Position of the light source in 3D space.
-  - N: Normal vector at the point.
-  - ambient_color: Color of the ambient light.
-  - diffuse_color: Color of the diffuse light.
-  - specular_color: Color of the specular light.
-  - shininess: Shininess coefficient for specular reflection.
+    diffuse_strength = np.maximum(0.0, np.dot(light.position, N))
+    diffuse = diffuse_strength * light.intensity
+    total_diffuse += diffuse
 
-  Returns:
-  - Final color at the point.
-  """
-  L = normalize(lpos - pos)
-  V = normalize(-pos)
-  R = 2*(np.dot(N, L))*N - L
-
-  # Compute terms in the illumination equation
-  light_dot_normal = np.maximum(np.dot(L, N), 0.0)
-  diffuse = np.array([0.0, 0.0, 0.0, 1.0])
-  diffuse = diffuse_product * light_dot_normal
-  reflected_dot_view_shiny = np.maximum(np.dot(R, V), 0.0) ** shininess
-  specular = np.array([0.0, 0.0, 0.0, 1.0])
-
-  specular = specular_product * reflected_dot_view_shiny
-  if (np.dot(L, N) < 0.0):
-    specular = np.array([0.0, 0.0, 0.0])
-  colour = ambient_product + diffuse + specular
-
+  total_diffuse = np.clip(total_diffuse, 0, 1)
+  lighting = ambient*sphere.ka + total_diffuse*sphere.kd
+  colour = lighting * sphere.colour
   return colour
 
 
 def hit_sphere(center: np.array, radius: float, ray: Ray):
   oc = ray.origin - center
-  a = np.linalg.norm(ray.direction)**2
-  half_b = np.dot(oc, ray.direction)
-  c = np.linalg.norm(oc)**2 - radius*radius
-  discriminant = half_b*half_b - a*c
+  a = np.dot(ray.direction, ray.direction)
+  b = 2 * np.dot(oc, ray.direction)
+  c = np.dot(oc, oc) - radius**2
+  d = b**2 - 4*a*c
 
-  if discriminant < 0:
-    return -1
+  if d < 0:
+    return 0, 0
   else:
-    return (-half_b - np.sqrt(discriminant)) / a
+    t1 = (-b - np.sqrt(d)) / (2*a)
+    t2 = (-b + np.sqrt(d)) / (2*a)
+    return t1, t2
 
 def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: np.array, near: float, spheres: List[Sphere], lights: List[Light], ambient: np.array):
   """
@@ -115,12 +96,15 @@ def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: np.array, near: 
           inverse_transformed_ray.origin = inverse_transformed_ray.origin[:-1]
           inverse_transformed_ray.direction = inverse_transformed_ray.direction[:-1]
 
-          intersection = hit_sphere(np.array([0, 0, 0]), 1, inverse_transformed_ray)
-          if intersection > 0 and intersection < closest_intersect:
-            closest_intersect = intersection
-            surface_normal = normalize(ray.at(intersection) - np.array([0, 0, -1]))
-            pixel_colour = sphere.colour * ads_lighting(ray.at(intersection), lights[0].position, surface_normal,
-                                        ambient, sphere.kd, sphere.ks, sphere.n)
+          t1, t2 = hit_sphere(np.array([0, 0, 0]), 1, inverse_transformed_ray) # Canonical sphere intersected with inv-ray
+          if t1 > 0 and t1 < closest_intersect:
+            closest_intersect = t1
+            surface_point = np.append(ray.at(t1), 0)
+
+            normal = (surface_point - np.append(sphere.position, 0))
+            normal = np.matmul(normal, np.transpose(sphere.inverse_transform))
+            normal = normal[:-1]
+            pixel_colour = ads_lighting(normal, sphere, lights, ambient)
 
         ppm_file.write(f"{pixel_colour[0]*255}, {pixel_colour[1]*255}, {pixel_colour[2]*255} ")
       ppm_file.write("\n")
