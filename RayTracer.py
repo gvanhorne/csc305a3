@@ -121,7 +121,9 @@ def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: np.array, near: 
             # Use t_h in the untransformed ray S + ct to find the intersection
             closest_intersect = t1
             intersection_point = ray.at(t1)
-            unit_normal = normalize(intersection_point - sphere.position)
+            unit_normal = np.matmul(np.append(inverse_transformed_ray.at(t1), 0), np.transpose(sphere.inverse_transform))
+            unit_normal = unit_normal[:-1]
+            unit_normal = normalize(unit_normal)
             ambient_colour = ambient * sphere.ka
             total_diffuse = np.array([0.0, 0.0, 0.0])
 
@@ -132,7 +134,7 @@ def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: np.array, near: 
               diffuse[0] = sphere.kd * np.maximum(0, np.dot(unit_light_dir, unit_normal)) * light.intensity[0]
               diffuse[1] = sphere.kd * np.maximum(0, np.dot(unit_light_dir, unit_normal)) * light.intensity[1]
               diffuse[2] = sphere.kd * np.maximum(0, np.dot(unit_light_dir, unit_normal)) * light.intensity[2]
-              total_diffuse += diffuse
+              total_diffuse = total_diffuse + diffuse
 
             lighting = ambient_colour + total_diffuse
             pixel_colour = lighting * sphere.colour
