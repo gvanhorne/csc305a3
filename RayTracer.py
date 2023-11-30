@@ -6,40 +6,81 @@ from light import Light
 import numpy as np
 import time
 
-def reflect(ray: Ray, t: float):
-  c = ray.direction
-  N = normalize(ray.direction)
-  return -2*(np.dot(N, c))*N + ray.direction
+def reflect(incident: np.array, normal: np.array):
+  """
+  Calculate the reflection direction for an incident vector and a normal vector.
+
+  Parameters:
+  - incident (numpy.array): The incident vector.
+  - normal (numpy.array): The normal vector.
+
+  Returns:
+  numpy.array:
+      The reflected vector representing the reflection direction.
+  """
+  incident = normalize(incident)
+  normal = normalize(normal)
+
+  reflected = incident - 2 * np.dot(incident, normal) * normal
+
+  return reflected
 
 def normalize(v: np.array):
+  """
+  Normalize a vector to create a unit vector.
+
+  Parameters:
+  - v (numpy.array): Input vector to be normalized.
+
+  Returns:
+  numpy.array:
+      A unit vector in the same direction as the input vector `v`.
+  """
   norm = np.linalg.norm(v)
   unit_vector = v / norm
   return unit_vector
 
-def ads_lighting(pos: np.array, N: np.array, sphere: Sphere, lights: List[Light], ambient: np.array):
-  total_diffuse = np.zeros_like(ambient)
+def ads(pos: np.array, N: np.array, sphere: Sphere, lights: List[Light], ambient: np.array):
+  """
+  Calculate the Ambient, Diffuse, and Specular (ADS) lighting for a point on a sphere.
+
+  Parameters:
+  - pos (numpy.ndarray): The position vector of the point on the sphere.
+  - N (numpy.ndarray): The normal vector at the point on the sphere.
+  - sphere (Sphere): The sphere object with material properties and color.
+  - lights (List[Light]): List of light sources affecting the sphere.
+  - ambient (numpy.ndarray): Ambient lighting color.
+
+  Returns:
+  numpy.ndarray:
+      The color of the point on the sphere based on ADS lighting model.
+  """
+  ambient_colour = ambient * sphere.ka
+  total_diffuse = np.array([0.0, 0.0, 0.0])
+  total_specular = np.array([0.0, 0.0, 0.0])
 
   for light in lights:
-    L = normalize(light.position - pos)
+    L = normalize(np.subtract(light.position, pos))
+    V = normalize(-pos)
+    R = reflect(-L, N)
 
-    light_dot_normal = np.maximum(np.dot(L, N), 0.0)
-    diffuse = sphere.kd * light_dot_normal
-    total_diffuse += diffuse
+    # Diffuse
+    diffuse = np.array([0.0, 0.0, 0.0])
+    light_dot_normal = np.maximum(0, np.dot(L, N))
+    diffuse = sphere.kd * light_dot_normal * light.intensity[:3]
+    total_diffuse = total_diffuse + diffuse
 
-  lighting = sphere.ka*ambient + total_diffuse
+    # Specular
+    specular = np.array([0.0, 0.0, 0.0])
+    reflected_dot_view_shiny = np.maximum(np.dot(R, V), 0.0)**sphere.n
+    specular = sphere.ks * reflected_dot_view_shiny * light.intensity[:3]
+    if (np.dot(L, N) < 0.0):
+      specular = np.array([0.0, 0.0, 0.0])
+    total_specular = total_specular + specular
+
+  lighting = ambient_colour + total_diffuse + total_specular
   colour = lighting * sphere.colour
   return colour
-  # total_diffuse = np.zeros_like(ambient)
-  # for light in lights:
-
-  #   diffuse_strength = np.maximum(0.0, np.dot(light.position, N))
-  #   diffuse = diffuse_strength * light.intensity
-  #   total_diffuse += diffuse
-
-  # # total_diffuse = np.clip(total_diffuse, 0, 1)
-  # lighting = ambient*sphere.ka + total_diffuse*sphere.kd
-  # colour = lighting * sphere.colour
-  # return colour
 
 
 def hit_sphere(center: np.array, radius: float, ray: Ray):
@@ -116,7 +157,7 @@ def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: np.array, near: 
           inverse_transformed_ray.direction = inverse_transformed_ray.direction[:-1]
 
           # Find the intersection t_h between inv-ray and canonical object
-          t1, t2 = hit_sphere(np.array([0, 0, 0]), 1, inverse_transformed_ray) # Canonical sphere intersected with inv-ray
+          t1, t2 = hit_sphere(np.array([0, 0, 0]), 1, inverse_transformed_ray)
           if t1 > 0 and t1 < closest_intersect:
             # Use t_h in the untransformed ray S + ct to find the intersection
             closest_intersect = t1
@@ -124,20 +165,8 @@ def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: np.array, near: 
             unit_normal = np.matmul(np.append(inverse_transformed_ray.at(t1), 0), np.transpose(sphere.inverse_transform))
             unit_normal = unit_normal[:-1]
             unit_normal = normalize(unit_normal)
-            ambient_colour = ambient * sphere.ka
-            total_diffuse = np.array([0.0, 0.0, 0.0])
 
-            for light in lights:
-              light_dir = np.subtract(light.position, intersection_point)
-              unit_light_dir = normalize(light_dir)
-              diffuse = np.array([0.0, 0.0, 0.0])
-              diffuse[0] = sphere.kd * np.maximum(0, np.dot(unit_light_dir, unit_normal)) * light.intensity[0]
-              diffuse[1] = sphere.kd * np.maximum(0, np.dot(unit_light_dir, unit_normal)) * light.intensity[1]
-              diffuse[2] = sphere.kd * np.maximum(0, np.dot(unit_light_dir, unit_normal)) * light.intensity[2]
-              total_diffuse = total_diffuse + diffuse
-
-            lighting = ambient_colour + total_diffuse
-            pixel_colour = lighting * sphere.colour
+            pixel_colour = ads(intersection_point, unit_normal, sphere, lights, ambient)
 
         ppm_file.write(f"{pixel_colour[0]*255}, {pixel_colour[1]*255}, {pixel_colour[2]*255} ")
       ppm_file.write("\n")
