@@ -241,7 +241,7 @@ if __name__ == "__main__":
     near = float(scene_dict['NEAR'])
     filename = scene_dict['OUTPUT']
     ambient_light = np.array([float(x) for x in scene_dict['AMBIENT']])
-    bg_colour = np.array(scene_dict['BACK'])
+    bg_colour = np.array([float(x) for x in scene_dict['BACK']])
     for sphere in scene_dict['SPHERES']:
       spheres.append(Sphere.from_array(sphere))
     for light in scene_dict['LIGHTS']:
