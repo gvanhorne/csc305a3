@@ -1,12 +1,16 @@
 import numpy as np
 
-class Sphere:
-    """
-    Represents a sphere in a 3D space.
+from ray import Ray
+from hittable import Hittable, HitRecord
+from utils import normalize
 
-    Attributes:
-    - name (str): String for the name to be used by the sphere
-    - position (np.array): NumPy array representing the position (x, y, z) of the sphere.
+class Sphere(Hittable):
+  def __init__(self, name, center, scaling, colour, ka, kd, ks, kr, n):
+    """
+    Initializes a Sphere object with the provided attributes.
+
+    Parameters:
+    - center (np.array): NumPy array representing the center (x, y, z) of the sphere.
     - scaling (np.array): NumPy array representing the non-uniform scaling factors (sx, sy, sz) of the sphere.
     - colour (np.array): NumPy array representing the (r, g, b) components of the sphere.
     - ka (float): Coefficient for ambient reflection.
@@ -14,69 +18,85 @@ class Sphere:
     - ks (float): Coefficient for specular reflection.
     - kr (float): Coefficient for reflection.
     - n (int): Specular exponent.
-    - transformation_matrix (np.array): 4x4 transformation matrix for transformation.
-
-    Example:
-    >>> sphere = Sphere(name='example', position=np.array([0.0, 0.0, -5.0]), scaling=np.array([1.0, 1.0, 1.0]), colour=np.array([1.0, 0.0, 0.0]),
-    ...                 ka=0.1, kd=0.7, ks=0.2, kr=0.1, n=10)
     """
+    self.name = name
+    self.center = np.array(center)
+    self.scaling = np.array(scaling)
+    self.colour = colour
+    self.ka = ka
+    self.kd = kd
+    self.ks = ks
+    self.kr = kr
+    self.n = n
+    self.transformation_matrix = np.array(
+      [
+        [scaling[0], 0, 0, center[0]],
+        [0, scaling[1], 0, center[1]],
+        [0, 0, scaling[2], center[2]],
+        [0, 0, 0, 1]
+      ]
+    )
+    self.inverse_transform = np.linalg.inv(self.transformation_matrix)
 
-    def __init__(self, name, position, scaling, colour, ka, kd, ks, kr, n):
-        """
-        Initializes a Sphere object with the provided attributes.
+  @classmethod
+  def from_array(cls, input_string):
+    """
+    Create a Sphere object from the provided input string.
 
-        Parameters:
-        - position (np.array): NumPy array representing the position (x, y, z) of the sphere.
-        - scaling (np.array): NumPy array representing the non-uniform scaling factors (sx, sy, sz) of the sphere.
-        - colour (np.array): NumPy array representing the (r, g, b) components of the sphere.
-        - ka (float): Coefficient for ambient reflection.
-        - kd (float): Coefficient for diffuse reflection.
-        - ks (float): Coefficient for specular reflection.
-        - kr (float): Coefficient for reflection.
-        - n (int): Specular exponent.
-        """
-        self.name = name
-        self.position = np.array(position)
-        self.scaling = np.array(scaling)
-        self.colour = colour
-        self.ka = ka
-        self.kd = kd
-        self.ks = ks
-        self.kr = kr
-        self.n = n
-        self.transformation_matrix = np.array(
-          [
-            [scaling[0], 0, 0, position[0]],
-            [0, scaling[1], 0, position[1]],
-            [0, 0, scaling[2], position[2]],
-            [0, 0, 0, 1]
-          ]
-        )
-        self.inverse_transform = np.linalg.inv(self.transformation_matrix)
+    Parameters:
+    - input_string (list): Input string in the format ['name', 'pos x', 'pos y', 'pos z', 'scl x', 'scl y', 'scl z', 'r', 'g', 'b', 'ka', 'kd', 'ks', 'kr', 'n'].
 
-    @classmethod
-    def from_array(cls, input_string):
-        """
-        Create a Sphere object from the provided input string.
+    Returns:
+    Sphere: Initialized Sphere object.
+    """
+    name = input_string[0]
+    center = np.array([float(x) for x in input_string[1:4]])
+    scaling = np.array([float(x) for x in input_string[4:7]])
+    colour = np.array([float(x) for x in input_string[7:10]])
+    ka, kd, ks, kr, n = map(float, input_string[10:])
+    return cls(name, center, scaling, colour, ka, kd, ks, kr, n)
 
-        Parameters:
-        - input_string (list): Input string in the format ['name', 'pos x', 'pos y', 'pos z', 'scl x', 'scl y', 'scl z', 'r', 'g', 'b', 'ka', 'kd', 'ks', 'kr', 'n'].
+  def hit(self, r: Ray, ray_tmin: float, ray_tmax: float):
+    inverse_transformed_ray = inverse_transform_ray(r, self.inverse_transform)
+    intersect = canonical_sphere_intersect(inverse_transformed_ray)
+    if not intersect:
+      return False
+    else:
+      t1, t2 = intersect
+    intersection_point = r.at(t1)
+    inverse_transformed_ray = inverse_transform_ray(r, self.inverse_transform)
 
-        Returns:
-        Sphere: Initialized Sphere object.
-        """
-        name = input_string[0]
-        position = np.array([float(x) for x in input_string[1:4]])
-        scaling = np.array([float(x) for x in input_string[4:7]])
-        colour = np.array([float(x) for x in input_string[7:10]])
-        ka, kd, ks, kr, n = map(float, input_string[10:])
-        return cls(name, position, scaling, colour, ka, kd, ks, kr, n)
+    normal = np.matmul(np.append(inverse_transformed_ray.at(t1), 0), np.transpose(self.inverse_transform))
+    normal = normal[:-1]
+    normal = normalize(normal)
+    return HitRecord(self, intersection_point, normal, t1)
 
-    def get_normal(self, surface_point):
-      return np.subtract(surface_point, self.position)
+def inverse_transform_ray(ray: Ray, transformation_matrix):
+    # Inverse transform ray and get S' + c't
+    transformed_origin = np.matmul(transformation_matrix, np.append(ray.origin, 1))
+    transformed_direction = np.matmul(transformation_matrix, np.append(ray.direction, 0))
 
-    def __str__(self):
-        """
-        Returns a string representation of the Sphere object.
-        """
-        return f"Sphere {self.name}: position={repr(self.position)}, scaling={repr(self.scaling)}, colour={repr(self.colour)}, ka={self.ka}, kd={self.kd}, ks={self.ks}, kr={self.kr}, n={self.n}"
+    # Drop the homogeneous points
+    transformed_origin = transformed_origin[:-1]
+    transformed_direction = transformed_direction[:-1]
+
+    inverse_transformed_ray = Ray(transformed_origin, transformed_direction, ray.depth)
+    return inverse_transformed_ray
+
+def canonical_sphere_intersect(inverse_transformed_ray: Ray):
+    # Find the intersection t_h between inv-ray and canonical object
+    return hit_sphere(np.array([0, 0, 0]), 1, inverse_transformed_ray)
+
+def hit_sphere(center: np.array, radius: float, ray: Ray):
+  oc = ray.origin - center
+  a = np.dot(ray.direction, ray.direction)
+  b = 2 * np.dot(oc, ray.direction)
+  c = np.dot(oc, oc) - radius**2
+  d = b**2 - 4*a*c
+
+  if d < 0:
+    return False
+  else:
+    t1 = (-b - np.sqrt(d)) / (2*a)
+    t2 = (-b + np.sqrt(d)) / (2*a)
+    return t1, t2
