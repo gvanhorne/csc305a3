@@ -7,6 +7,9 @@ from light import Light
 import numpy as np
 import time
 from utils import normalize, reflect
+BLACK = np.array([0.0, 0.0, 0.0])
+Point, Vector, Colour = np.array, np.array, np.array # Alias for geometric clarity
+t_offset = 0.000001 # avoid false intersections due to floating point precision
 
 def intersect_objects(ray: Ray, spheres: List[Sphere]):
   nearest = float('inf')
@@ -22,46 +25,50 @@ def intersect_objects(ray: Ray, spheres: List[Sphere]):
 
   return closest_hit
 
-def ads(pos: np.array, N: np.array, sphere: Sphere, lights: List[Light], ambient: np.array):
-  """
-  Calculate the Ambient, Diffuse, and Specular (ADS) lighting for a point on a sphere.
+def spec_colour(light: Light, hit: HitRecord):
+  N = hit.normal
+  sphere = hit.obj
+  L = normalize(np.subtract(light.position, hit.p + t_offset))
+  V = normalize(-hit.p)
+  R = reflect(-L, N)
 
-  Parameters:
-  - pos (numpy.ndarray): The position vector of the point on the sphere.
-  - N (numpy.ndarray): The normal vector at the point on the sphere.
-  - sphere (Sphere): The sphere object with material properties and color.
-  - lights (List[Light]): List of light sources affecting the sphere.
-  - ambient (numpy.ndarray): Ambient lighting color.
+  reflected_dot_view_shiny = np.maximum(np.dot(R, V), 0.0)**sphere.n
+  specular = sphere.ks * reflected_dot_view_shiny * light.intensity[:3]
+  if (np.dot(L, N) < 0.0):
+    return BLACK
+  return specular
 
-  Returns:
-  numpy.ndarray:
-      The color of the point on the sphere based on ADS lighting model.
-  """
-  ambient_colour = ambient * sphere.ka
-  total_diffuse = np.array([0.0, 0.0, 0.0])
-  total_specular = np.array([0.0, 0.0, 0.0])
+def shadowray(light: Light, hit: HitRecord, spheres: List[Sphere]):
+  L = Ray(light.position, normalize(np.subtract(light.position, hit.p + t_offset)), 1)
+  light_dot_normal = np.maximum(0, np.dot(L.direction, hit.normal))
+  shadow_source = intersect_objects(L, spheres)
+  if shadow_source:
+    return BLACK
+  return hit.obj.kd * light_dot_normal * light.intensity[:3]
+  
 
+def raytrace(r: Ray, spheres: List[Sphere], bg_colour: np.array, lights: List[Light], ambient: Colour):
+  if r.depth > r.max_depth:
+    return BLACK
+  hit = intersect_objects(r, spheres)
+  if not hit:
+    return bg_colour
+
+  # Ambient
+  ambient_colour = ambient * hit.obj.ka
+
+  # Diffuse
+  total_diffuse = np.zeros_like(BLACK)
   for light in lights:
-    L = normalize(np.subtract(light.position, pos))
-    V = normalize(-pos)
-    R = reflect(-L, N)
+    total_diffuse += shadowray(light, hit, spheres)
 
-    # Diffuse
-    diffuse = np.array([0.0, 0.0, 0.0])
-    light_dot_normal = np.maximum(0, np.dot(L, N))
-    diffuse = sphere.kd * light_dot_normal * light.intensity[:3]
-    total_diffuse = total_diffuse + diffuse
+  # Specular
+  total_spec = np.zeros_like(BLACK)
+  for light in lights:
+    total_spec += spec_colour(light, hit)
 
-    # Specular
-    specular = np.array([0.0, 0.0, 0.0])
-    reflected_dot_view_shiny = np.maximum(np.dot(R, V), 0.0)**sphere.n
-    specular = sphere.ks * reflected_dot_view_shiny * light.intensity[:3]
-    if (np.dot(L, N) < 0.0):
-      specular = np.array([0.0, 0.0, 0.0])
-    total_specular = total_specular + specular
-
-  lighting = ambient_colour + total_diffuse + total_specular
-  colour = lighting * sphere.colour
+  lighting = ambient_colour + total_diffuse + total_spec
+  colour = lighting * hit.obj.colour
   return colour
 
 def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: np.array, near: float, spheres: List[Sphere], lights: List[Light], ambient: np.array):
@@ -112,11 +119,7 @@ def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: np.array, near: 
         pixel_center = pixel00_loc + (i * pixel_delta_u) + (j * pixel_delta_v)
         ray_direction = pixel_center - camera_center
         ray = Ray(camera_center, ray_direction, 1)
-        hit = intersect_objects(ray, spheres)
-        if hit:
-          pixel_colour = ads(hit.p, hit.normal, hit.obj, lights, ambient)
-        else:
-          pixel_colour = bg_colour
+        pixel_colour = raytrace(ray, spheres, bg_colour, lights, ambient)
 
         ppm_file.write(f"{pixel_colour[0]*255}, {pixel_colour[1]*255}, {pixel_colour[2]*255} ")
       ppm_file.write("\n")
