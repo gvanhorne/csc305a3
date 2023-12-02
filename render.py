@@ -7,7 +7,9 @@ commands = [
     "python3 RayTracer.py tests/testBackground.txt",
     "python3 RayTracer.py tests/testBehind.txt",
     "python3 RayTracer.py tests/testIntersection.txt",
-    "python3 RayTracer.py tests/testDiffuse.txt"
+    "python3 RayTracer.py tests/testDiffuse.txt",
+    "python3 RayTracer.py tests/testShadow.txt",
+    "python3 RayTracer.py tests/testSpecular.txt"
 ]
 
 # Run commands sequentially
