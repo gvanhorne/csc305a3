@@ -1,84 +1,26 @@
 import sys
 from typing import List
+from hittable import HitRecord
 from sphere import Sphere
 from ray import Ray
 from light import Light
 import numpy as np
 import time
+from utils import normalize, reflect
 
 def intersect_objects(ray: Ray, spheres: List[Sphere]):
-  closest_intersect = float('inf')  # Initialize to positive infinity
-  hit = False
+  nearest = float('inf')
+  closest_hit = False
   for sphere in spheres:
-      inverse_transformed_ray = inverse_transform_ray(ray, sphere.inverse_transform)
-      t1, t2 = canonical_sphere_intersect(inverse_transformed_ray)
+      hit = sphere.hit(ray, float('-inf'), float('inf'))
+      if hit and 0 < hit.t < nearest:
+        nearest = hit.t
+        closest_hit = hit
 
-      if 0 < t1 < closest_intersect:
-        closest_intersect = t1
-        closest_sphere = sphere
-        hit = True
+  if not closest_hit:
+    return False
 
-  if not hit:
-    return None
-  intersection_point = ray.at(closest_intersect)
-  inverse_transformed_ray = inverse_transform_ray(ray, closest_sphere.inverse_transform)
-
-  normal = np.matmul(np.append(inverse_transformed_ray.at(closest_intersect), 0), np.transpose(closest_sphere.inverse_transform))
-  normal = normal[:-1]
-  normal = normalize(normal)
-
-  return {"sphere": closest_sphere, "point": intersection_point, "normal": normal}
-
-def inverse_transform_ray(ray: Ray, transformation_matrix):
-    # Inverse transform ray and get S' + c't
-    transformed_origin = np.matmul(transformation_matrix, np.append(ray.origin, 1))
-    transformed_direction = np.matmul(transformation_matrix, np.append(ray.direction, 0))
-
-    # Drop the homogeneous points
-    transformed_origin = transformed_origin[:-1]
-    transformed_direction = transformed_direction[:-1]
-
-    inverse_transformed_ray = Ray(transformed_origin, transformed_direction, ray.depth)
-    return inverse_transformed_ray
-
-def canonical_sphere_intersect(inverse_transformed_ray):
-    # Find the intersection t_h between inv-ray and canonical object
-    t1, t2 = hit_sphere(np.array([0, 0, 0]), 1, inverse_transformed_ray)
-    return t1, t2
-
-def reflect(incident: np.array, normal: np.array):
-  """
-  Calculate the reflection direction for an incident vector and a normal vector.
-
-  Parameters:
-  - incident (numpy.array): The incident vector.
-  - normal (numpy.array): The normal vector.
-
-  Returns:
-  numpy.array:
-      The reflected vector representing the reflection direction.
-  """
-  incident = normalize(incident)
-  normal = normalize(normal)
-
-  reflected = incident - 2 * np.dot(incident, normal) * normal
-
-  return reflected
-
-def normalize(v: np.array):
-  """
-  Normalize a vector to create a unit vector.
-
-  Parameters:
-  - v (numpy.array): Input vector to be normalized.
-
-  Returns:
-  numpy.array:
-      A unit vector in the same direction as the input vector `v`.
-  """
-  norm = np.linalg.norm(v)
-  unit_vector = v / norm
-  return unit_vector
+  return closest_hit
 
 def ads(pos: np.array, N: np.array, sphere: Sphere, lights: List[Light], ambient: np.array):
   """
@@ -121,21 +63,6 @@ def ads(pos: np.array, N: np.array, sphere: Sphere, lights: List[Light], ambient
   lighting = ambient_colour + total_diffuse + total_specular
   colour = lighting * sphere.colour
   return colour
-
-
-def hit_sphere(center: np.array, radius: float, ray: Ray):
-  oc = ray.origin - center
-  a = np.dot(ray.direction, ray.direction)
-  b = 2 * np.dot(oc, ray.direction)
-  c = np.dot(oc, oc) - radius**2
-  d = b**2 - 4*a*c
-
-  if d < 0:
-    return 0, 0
-  else:
-    t1 = (-b - np.sqrt(d)) / (2*a)
-    t2 = (-b + np.sqrt(d)) / (2*a)
-    return t1, t2
 
 def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: np.array, near: float, spheres: List[Sphere], lights: List[Light], ambient: np.array):
   """
@@ -187,7 +114,7 @@ def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: np.array, near: 
         ray = Ray(camera_center, ray_direction, 1)
         hit = intersect_objects(ray, spheres)
         if hit:
-          pixel_colour = ads(hit['point'], hit['normal'], hit['sphere'], lights, ambient)
+          pixel_colour = ads(hit.p, hit.normal, hit.obj, lights, ambient)
         else:
           pixel_colour = bg_colour
 
