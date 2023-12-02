@@ -1,7 +1,9 @@
 import numpy as np
 
 class Ray:
-  def __init__(self, origin: np.array, direction: np.array):
+  max_depth = 3
+
+  def __init__(self, origin: np.array, direction: np.array, depth: int):
     """
     Initialize a Ray object with an origin point and a direction vector.
 
@@ -11,6 +13,7 @@ class Ray:
     """
     self.origin = origin
     self.direction = direction
+    self.depth = depth
 
   def at(self, t: float) -> np.array:
     """
