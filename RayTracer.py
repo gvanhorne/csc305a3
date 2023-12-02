@@ -6,6 +6,23 @@ from light import Light
 import numpy as np
 import time
 
+def inverse_transform_ray(ray: Ray, transformation_matrix):
+    # Inverse transform ray and get S' + c't
+    transformed_origin = np.matmul(transformation_matrix, np.append(ray.origin, 1))
+    transformed_direction = np.matmul(transformation_matrix, np.append(ray.direction, 0))
+
+    # Drop the homogeneous points
+    transformed_origin = transformed_origin[:-1]
+    transformed_direction = transformed_direction[:-1]
+
+    inverse_transformed_ray = Ray(transformed_origin, transformed_direction, ray.depth)
+    return inverse_transformed_ray
+
+def canonical_sphere_intersect(inverse_transformed_ray):
+    # Find the intersection t_h between inv-ray and canonical object
+    t1, t2 = hit_sphere(np.array([0, 0, 0]), 1, inverse_transformed_ray)
+    return t1, t2
+
 def reflect(incident: np.array, normal: np.array):
   """
   Calculate the reflection direction for an incident vector and a normal vector.
@@ -144,20 +161,12 @@ def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: np.array, near: 
       for i in range(image_width):
         pixel_center = pixel00_loc + (i * pixel_delta_u) + (j * pixel_delta_v)
         ray_direction = pixel_center - camera_center
-        ray = Ray(camera_center, ray_direction)
+        ray = Ray(camera_center, ray_direction, 1)
         pixel_colour = bg_colour
         closest_intersect = float('inf')
         for sphere in spheres:
-
-          # Inverse transform ray and get S' + c't
-          inverse_transformed_ray = Ray(np.matmul(sphere.inverse_transform, np.append(ray.origin, 1)),
-                                        np.matmul(sphere.inverse_transform, np.append(ray.direction, 0)))
-          # Drop the homogeneous points
-          inverse_transformed_ray.origin = inverse_transformed_ray.origin[:-1]
-          inverse_transformed_ray.direction = inverse_transformed_ray.direction[:-1]
-
-          # Find the intersection t_h between inv-ray and canonical object
-          t1, t2 = hit_sphere(np.array([0, 0, 0]), 1, inverse_transformed_ray)
+          inverse_transformed_ray = inverse_transform_ray(ray, sphere.inverse_transform)
+          t1, t2 = canonical_sphere_intersect(inverse_transformed_ray)
           if t1 > 0 and t1 < closest_intersect:
             # Use t_h in the untransformed ray S + ct to find the intersection
             closest_intersect = t1
