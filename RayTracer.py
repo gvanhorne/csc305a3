@@ -6,6 +6,29 @@ from light import Light
 import numpy as np
 import time
 
+def intersect_objects(ray: Ray, spheres: List[Sphere]):
+  closest_intersect = float('inf')  # Initialize to positive infinity
+  hit = False
+  for sphere in spheres:
+      inverse_transformed_ray = inverse_transform_ray(ray, sphere.inverse_transform)
+      t1, t2 = canonical_sphere_intersect(inverse_transformed_ray)
+
+      if 0 < t1 < closest_intersect:
+        closest_intersect = t1
+        closest_sphere = sphere
+        hit = True
+
+  if not hit:
+    return None
+  intersection_point = ray.at(closest_intersect)
+  inverse_transformed_ray = inverse_transform_ray(ray, closest_sphere.inverse_transform)
+
+  normal = np.matmul(np.append(inverse_transformed_ray.at(closest_intersect), 0), np.transpose(closest_sphere.inverse_transform))
+  normal = normal[:-1]
+  normal = normalize(normal)
+
+  return {"sphere": closest_sphere, "point": intersection_point, "normal": normal}
+
 def inverse_transform_ray(ray: Ray, transformation_matrix):
     # Inverse transform ray and get S' + c't
     transformed_origin = np.matmul(transformation_matrix, np.append(ray.origin, 1))
@@ -162,20 +185,11 @@ def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: np.array, near: 
         pixel_center = pixel00_loc + (i * pixel_delta_u) + (j * pixel_delta_v)
         ray_direction = pixel_center - camera_center
         ray = Ray(camera_center, ray_direction, 1)
-        pixel_colour = bg_colour
-        closest_intersect = float('inf')
-        for sphere in spheres:
-          inverse_transformed_ray = inverse_transform_ray(ray, sphere.inverse_transform)
-          t1, t2 = canonical_sphere_intersect(inverse_transformed_ray)
-          if t1 > 0 and t1 < closest_intersect:
-            # Use t_h in the untransformed ray S + ct to find the intersection
-            closest_intersect = t1
-            intersection_point = ray.at(t1)
-            unit_normal = np.matmul(np.append(inverse_transformed_ray.at(t1), 0), np.transpose(sphere.inverse_transform))
-            unit_normal = unit_normal[:-1]
-            unit_normal = normalize(unit_normal)
-
-            pixel_colour = ads(intersection_point, unit_normal, sphere, lights, ambient)
+        hit = intersect_objects(ray, spheres)
+        if hit:
+          pixel_colour = ads(hit['point'], hit['normal'], hit['sphere'], lights, ambient)
+        else:
+          pixel_colour = bg_colour
 
         ppm_file.write(f"{pixel_colour[0]*255}, {pixel_colour[1]*255}, {pixel_colour[2]*255} ")
       ppm_file.write("\n")
