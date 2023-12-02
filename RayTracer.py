@@ -1,17 +1,17 @@
 import sys
-from typing import List
+from typing import List, Union
 from hittable import HitRecord
 from sphere import Sphere
 from ray import Ray
 from light import Light
 import numpy as np
 import time
-from utils import normalize, reflect
-BLACK = np.array([0.0, 0.0, 0.0])
-Point, Vector, Colour = np.array, np.array, np.array # Alias for geometric clarity
-t_offset = 0.000001 # avoid false intersections due to floating point precision
+from utils import normalize, reflect, Point, Vector, Colour
+BLACK = Colour([0.0, 0.0, 0.0])
+# avoid false intersections due to floating point precision
+t_offset = 0.000001
 
-def intersect_objects(ray: Ray, spheres: List[Sphere]):
+def intersect_objects(ray: Ray, spheres: List[Sphere]) -> Union[HitRecord, bool]:
   nearest = float('inf')
   closest_hit = False
   for sphere in spheres:
@@ -25,7 +25,17 @@ def intersect_objects(ray: Ray, spheres: List[Sphere]):
 
   return closest_hit
 
-def spec_colour(light: Light, hit: HitRecord):
+def spec_colour(light: Light, hit: HitRecord) -> Colour:
+  """
+  Calculate the specular reflection color for a given light and hit record.
+
+  Args:
+    light (Light): The light source.
+    hit (HitRecord): The hit record containing information about the intersection.
+
+  Returns:
+    Colour: The specular reflection color.
+  """
   N = hit.normal
   sphere = hit.obj
   L = normalize(np.subtract(light.position, hit.p + t_offset))
@@ -38,16 +48,39 @@ def spec_colour(light: Light, hit: HitRecord):
     return BLACK
   return specular
 
-def shadowray(light: Light, hit: HitRecord, spheres: List[Sphere]):
+def shadowray(light: Light, hit: HitRecord, spheres: List[Sphere]) -> Colour:
+  """
+  Calculate the contribution of each light to a point, or the presence of a shadow.
+
+  Args:
+      light (Light): The light source.
+      hit (HitRecord): The hit record containing information about the intersection.
+      spheres (List[Sphere]): List of spheres in the scene.
+
+  Returns:
+      Colour: The color considering shadows.
+  """
   L = Ray(hit.p + t_offset, normalize(np.subtract(light.position, hit.p + t_offset)), 1)
   light_dot_normal = np.maximum(0, np.dot(L.direction, hit.normal))
   shadow_source = intersect_objects(L, spheres)
   if shadow_source:
     return BLACK
-  return hit.obj.kd * light_dot_normal * light.intensity[:3]
-  
+  return hit.obj.kd * light_dot_normal * light.intensity[:3] * hit.obj.colour[:3]
 
-def raytrace(r: Ray, spheres: List[Sphere], bg_colour: np.array, lights: List[Light], ambient: Colour):
+def raytrace(r: Ray, spheres: List[Sphere], bg_colour: Colour, lights: List[Light], ambient: Colour) -> Colour:
+  """
+  Perform ray tracing to calculate the color returned by a ray.
+
+  Args:
+      r (Ray): The ray to trace.
+      spheres (List[Sphere]): List of spheres in the scene.
+      bg_colour (Colour): Background color.
+      lights (List[Light]): List of light sources.
+      ambient (Colour): Ambient color.
+
+  Returns:
+      Colour: The color returned by the given ray.
+  """
   if r.depth > r.max_depth:
     return BLACK
   hit = intersect_objects(r, spheres)
@@ -55,7 +88,7 @@ def raytrace(r: Ray, spheres: List[Sphere], bg_colour: np.array, lights: List[Li
     return bg_colour
 
   # Ambient
-  ambient_colour = ambient * hit.obj.ka
+  ambient_colour = ambient * hit.obj.ka * hit.obj.colour[:3]
 
   # Diffuse
   total_diffuse = np.zeros_like(BLACK)
@@ -68,12 +101,11 @@ def raytrace(r: Ray, spheres: List[Sphere], bg_colour: np.array, lights: List[Li
     total_spec += spec_colour(light, hit)
 
   re = Ray(hit.p, reflect(r.direction, normalize(r.direction)), r.depth + 1)
-  lighting = ambient_colour + total_diffuse + total_spec
-  lighting += hit.obj.kr * raytrace(re, spheres, bg_colour, lights, ambient) # Add the colour returned by reflected ray
-  colour = lighting * hit.obj.colour
+  colour = ambient_colour + total_diffuse + total_spec
+  colour += hit.obj.kr * raytrace(re, spheres, bg_colour, lights, ambient) # Add the colour returned by reflected ray
   return colour
 
-def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: np.array, near: float, spheres: List[Sphere], lights: List[Light], ambient: np.array):
+def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: Colour, near: float, spheres: List[Sphere], lights: List[Light], ambient: Colour) -> None:
   """
   Write out a PPM image file.
 
@@ -97,18 +129,18 @@ def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: np.array, near: 
   focal_length = near
   viewport_height = 2.0
   viewport_width = viewport_height * (image_width / image_height)
-  camera_center = np.array([0, 0, 0])
+  camera_center = Point([0, 0, 0])
 
   # Calculate the vectors across the horizontal and down the vertical viewport edges.
-  viewport_u = np.array([viewport_width, 0, 0])
-  viewport_v = np.array([0, -viewport_height, 0])
+  viewport_u = Vector([viewport_width, 0, 0])
+  viewport_v = Vector([0, -viewport_height, 0])
 
   # Calculate the location of the upper left pixel.
   pixel_delta_u = viewport_u / image_width
   pixel_delta_v = viewport_v / image_height
 
   # Calculate the location of the upper left pixel.
-  viewport_upper_left = camera_center - np.array([0, 0, focal_length]) - viewport_u/2 - viewport_v/2
+  viewport_upper_left = camera_center - Point([0, 0, focal_length]) - viewport_u/2 - viewport_v/2
   pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v)
 
   with open(filename, 'w') as ppm_file:
@@ -122,6 +154,7 @@ def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: np.array, near: 
         ray_direction = pixel_center - camera_center
         ray = Ray(camera_center, ray_direction, 1)
         pixel_colour = raytrace(ray, spheres, bg_colour, lights, ambient)
+        pixel_colour = np.clip(pixel_colour, a_min=None, a_max=1.0)
 
         ppm_file.write(f"{pixel_colour[0]*255}, {pixel_colour[1]*255}, {pixel_colour[2]*255} ")
       ppm_file.write("\n")
@@ -195,8 +228,8 @@ if __name__ == "__main__":
     ncols, nrows = int(scene_dict['RES'][0]), int(scene_dict['RES'][1])
     near = float(scene_dict['NEAR'])
     filename = scene_dict['OUTPUT']
-    ambient_light = np.array([float(x) for x in scene_dict['AMBIENT']])
-    bg_colour = np.array([float(x) for x in scene_dict['BACK']])
+    ambient_light = Colour([float(x) for x in scene_dict['AMBIENT']])
+    bg_colour = Colour([float(x) for x in scene_dict['BACK']])
     for sphere in scene_dict['SPHERES']:
       spheres.append(Sphere.from_array(sphere))
     for light in scene_dict['LIGHTS']:

@@ -1,15 +1,16 @@
 import numpy as np
+Point, Vector, Colour = np.array, np.array, np.array # Alias for geometric clarity
 
-def reflect(incident: np.array, normal: np.array):
+def reflect(incident: Vector, normal: Vector):
   """
   Calculate the reflection direction for an incident vector and a normal vector.
 
   Parameters:
-  - incident (numpy.array): The incident vector.
-  - normal (numpy.array): The normal vector.
+  - incident (Vector): The incident vector.
+  - normal (Vector): The normal vector.
 
   Returns:
-  numpy.array:
+  Vector:
       The reflected vector representing the reflection direction.
   """
   incident = normalize(incident)
@@ -19,12 +20,12 @@ def reflect(incident: np.array, normal: np.array):
 
   return reflected
 
-def normalize(v: np.array):
+def normalize(v: Vector):
   """
   Normalize a vector to create a unit vector.
 
   Parameters:
-  - v (numpy.array): Input vector to be normalized.
+  - v (Vector): Input vector to be normalized.
 
   Returns:
   numpy.array:
