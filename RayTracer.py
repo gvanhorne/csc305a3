@@ -39,7 +39,7 @@ def spec_colour(light: Light, hit: HitRecord):
   return specular
 
 def shadowray(light: Light, hit: HitRecord, spheres: List[Sphere]):
-  L = Ray(light.position, normalize(np.subtract(light.position, hit.p + t_offset)), 1)
+  L = Ray(hit.p + t_offset, normalize(np.subtract(light.position, hit.p + t_offset)), 1)
   light_dot_normal = np.maximum(0, np.dot(L.direction, hit.normal))
   shadow_source = intersect_objects(L, spheres)
   if shadow_source:
@@ -67,7 +67,9 @@ def raytrace(r: Ray, spheres: List[Sphere], bg_colour: np.array, lights: List[Li
   for light in lights:
     total_spec += spec_colour(light, hit)
 
+  re = Ray(hit.p, reflect(r.direction, normalize(r.direction)), r.depth + 1)
   lighting = ambient_colour + total_diffuse + total_spec
+  lighting += hit.obj.kr * raytrace(re, spheres, bg_colour, lights, ambient) # Add the colour returned by reflected ray
   colour = lighting * hit.obj.colour
   return colour
 
