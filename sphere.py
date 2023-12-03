@@ -1,4 +1,5 @@
 import numpy as np
+from typing import List, Union
 
 from ray import Ray
 from hittable import Hittable, HitRecord
@@ -56,7 +57,17 @@ class Sphere(Hittable):
     ka, kd, ks, kr, n = map(float, input_string[10:])
     return cls(name, center, scaling, colour, ka, kd, ks, kr, n)
 
-  def hit(self, r: Ray, ray_tmin: float, ray_tmax: float):
+  def hit(self, r: Ray, ray_tmin: float, eye_ray: bool) -> Union[HitRecord, bool]:
+    """
+    Check for intersection between a ray and the sphere.
+
+    Parameters:
+    - r (Ray): The ray being traced.
+    - ray_tmin (float): Minimum value of t for valid intersections.
+
+    Returns:
+    Union[HitRecord, bool]: HitRecord if there is an intersection, False otherwise.
+    """
     inverse_transformed_ray = inverse_transform_ray(r, self.inverse_transform)
     intersect = canonical_sphere_intersect(inverse_transformed_ray)
     if not intersect:
@@ -71,7 +82,17 @@ class Sphere(Hittable):
     normal = normalize(normal)
     return HitRecord(self, intersection_point, normal, t1)
 
-def inverse_transform_ray(ray: Ray, transformation_matrix):
+def inverse_transform_ray(ray: Ray, transformation_matrix: np.array) -> Ray:
+    """
+    Apply the inverse transformation matrix to a ray.
+
+    Parameters:
+    - ray (Ray): The ray to be transformed.
+    - transformation_matrix: The inverse transformation matrix.
+
+    Returns:
+    Ray: The transformed ray.
+    """
     # Inverse transform ray and get S' + c't
     transformed_origin = np.matmul(transformation_matrix, np.append(ray.origin, 1))
     transformed_direction = np.matmul(transformation_matrix, np.append(ray.direction, 0))
@@ -84,10 +105,30 @@ def inverse_transform_ray(ray: Ray, transformation_matrix):
     return inverse_transformed_ray
 
 def canonical_sphere_intersect(inverse_transformed_ray: Ray):
+    """
+    Find the intersection between the inverse-transformed ray and a canonical sphere.
+
+    Parameters:
+    - inverse_transformed_ray (Ray): The inverse-transformed ray.
+
+    Returns:
+    Tuple[float, float]: The two intersection points.
+    """
     # Find the intersection t_h between inv-ray and canonical object
     return hit_sphere(np.array([0, 0, 0]), 1, inverse_transformed_ray)
 
-def hit_sphere(center: np.array, radius: float, ray: Ray):
+def hit_sphere(center: np.array, radius: float, ray: Ray) -> Union[float, float, bool]:
+  """
+  Check for intersection between a ray and a sphere.
+
+  Parameters:
+  - center (np.array): The center of the sphere.
+  - radius (float): The radius of the sphere.
+  - ray (Ray): The ray being traced.
+
+  Returns:
+  Union[float, float, bool]: The two intersection points if there is an intersection, False otherwise.
+  """
   oc = ray.origin - center
   a = np.dot(ray.direction, ray.direction)
   b = 2 * np.dot(oc, ray.direction)
