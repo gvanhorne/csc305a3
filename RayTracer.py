@@ -100,9 +100,14 @@ def raytrace(r: Ray, spheres: List[Sphere], bg_colour: Colour, lights: List[Ligh
   for light in lights:
     total_spec += spec_colour(light, hit)
 
-  re = Ray(hit.p, reflect(r.direction, normalize(r.direction)), r.depth + 1)
-  colour = ambient_colour + total_diffuse + total_spec
-  colour += hit.obj.kr * raytrace(re, spheres, bg_colour, lights, ambient) # Add the colour returned by reflected ray
+  # Reflected colour
+  re = Ray(hit.p, reflect(r.direction, hit.normal), r.depth + 1)
+  reflected_colour = raytrace(re, spheres, bg_colour, lights, ambient)
+  if np.all(reflected_colour == bg_colour):
+    reflected_colour = BLACK
+  reflected_colour *= hit.obj.kr
+
+  colour = ambient_colour + total_diffuse + total_spec + reflected_colour
   return colour
 
 def write_ppm(filename: str, ncols: int, nrows: int, bg_colour: Colour, near: float, spheres: List[Sphere], lights: List[Light], ambient: Colour) -> None:
