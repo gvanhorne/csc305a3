@@ -1,19 +1,21 @@
-from typing import Tuple
-import math
+import numpy as np
 
 class Ray:
-  def __init__(self, origin: Tuple[float, float, float], direction: Tuple[float, float, float]):
+  max_depth = 3
+
+  def __init__(self, origin: np.array, direction: np.array, depth: int):
     """
     Initialize a Ray object with an origin point and a direction vector.
 
     Parameters:
-    - origin (tuple): A tuple representing the (x, y, z) coordinates of the origin point.
-    - direction (tuple): A tuple representing the (I, j, k) components of the direction vector.
+    - origin (np.array): A NumPy array representing the (x, y, z) coordinates of the origin point.
+    - direction (np.array): A NumPy array representing the (I, j, k) components of the direction vector.
     """
-    self.origin = tuple(origin)
-    self.direction = tuple(direction)
+    self.origin = origin
+    self.direction = direction
+    self.depth = depth
 
-  def at(self, t: float) -> Tuple[float, float, float]:
+  def at(self, t: float) -> np.array:
     """
     Calculate a point along the ray at a given parameter t.
 
@@ -21,18 +23,16 @@ class Ray:
     - t (float): The parameter value indicating the position along the ray.
 
     Returns:
-    tuple: A tuple representing the (x, y, z) coordinates of the point along the ray at parameter t.
+    np.array: A NumPy array representing the (x, y, z) coordinates of the point along the ray at parameter t.
     """
-    scaled_direction = tuple(t * d for d in self.direction)
-    return tuple(o + sd for o, sd in zip(self.origin, scaled_direction))
+    scaled_direction = t * self.direction
+    return self.origin + scaled_direction
 
-  def normalized_direction(self) -> Tuple[float, float, float]:
+  def get_norm(self) -> float:
     """
-    Return the normalized direction vector.
+    Get the norm (magnitude) of the ray's direction vector.
 
     Returns:
-    Tuple[float, float, float]: The normalized direction vector.
+    float: The norm of the direction vector.
     """
-    length = math.sqrt(sum(component**2 for component in self.direction))
-    normalized_vector = tuple(component / length for component in self.direction)
-    return normalized_vector
+    return np.linalg.norm(self.direction)
